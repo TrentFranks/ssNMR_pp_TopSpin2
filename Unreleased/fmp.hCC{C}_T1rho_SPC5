@@ -1,0 +1,232 @@
+;hC CP with TMREV (TopSpin 2.3)
+
+;Use cpd7 and cpd8 as TMREV and TMREV_180
+
+;######################################################
+;#                                                    #
+;#                                                    #
+;######################################################
+;  
+; Options DP, Cpre, CDC
+; written W Trent Franks
+
+;$COMMENT= HC CP with C DQ mixing
+;$CLASS=Solids
+;$DIM=2D
+;$TYPE=Homonuclear
+;$SUBTYPE=DQ mix
+;$OWNER=guest
+
+;prosol relations=<solids_cp>
+
+;#include <Avancesolids.incl>
+#include <C_detect_def.incl>
+
+;######################################################
+;#                   Define Mixing                    #
+;######################################################
+
+#include <fmp.TMREV.subr>
+#include <fmp.SPC5.subr>
+#include <fmp.DARR.subr>
+
+;cnst11 : adjust t=0 for acq, if digmod = baseopt
+"acqt0=1u*cnst11"
+
+"in0=inf1"                  ;##########################
+"d0=in0/2-0.3u-p1*2/3.14159";#   t1_init => 90,-180   #
+"in30=inf1"                 ;#                        #
+define loopcounter go_t1    ;#   No increment if 1D   #
+"go_t1=td1"                 ;##########################
+
+define delay ONTIME         ;##########################
+define loopcounter T1evo    ;# Power Deposition Calcs #
+"T1evo=larger(td1,cnst30)"  ;#   Constant Duty Cycle  #
+"d30=T1evo*in30"            ;##########################
+                            
+                            ;##########################
+;$EXTERN                    ;# python insertion point #
+                            ;##########################
+
+aqseq 312
+
+Prepare, ze
+
+"d30=d30/2"                 ;#divide by 2 for mc macro#
+
+#ifdef SPC52
+  "ONTIME=aq+d0+d30+p10+p8+maxT_TMREV+2*SPC52mix"
+#else
+  "ONTIME=aq+d0+d30+p10+p8+maxT_TMREV+2*SPC53mix"
+#endif
+
+;######################################################
+;#               Protections: Pre-Check               #
+;######################################################
+
+#include <Standard_Prot.incl>
+        ;acquisition, CP time, PDSD/DARR, and echo restrictions
+#include <DARR_prot.incl>
+#include <SPC5_prot.incl>
+        ;loop l5 
+#include <t1_prot.incl>
+        ;check t1 evolution time
+#include <TMREV_prot.incl>
+        ;Recoupling restrictions
+#include <ONTIME_prot.incl>
+        ;total RF depsosition restriction
+
+if "td2 <= (maxTMREV+1)" goto PassMaxTMREV
+  1m 
+  print "TMREV evolution (td2) too large, max td2 = 1+(cnst5*cnst6)"
+  goto HaltAcqu
+PassMaxTMREV, 1m
+
+;######################################################
+;#           Start of Active Pulse Program            #
+;######################################################
+
+"l10=0"
+
+Start, d1 do:H
+
+  1m rpp15                  ;##########################  
+  1m rpp16                  ;#  C5 phases reset here  #
+  1m rpp25                  ;##########################
+  1m rpp26
+ 
+;######################################################
+;#               Protections: In Situ                 #
+;######################################################
+
+; d0,d30 checked every row                            
+#include <t1evol_prot.incl>
+
+subr EVOL_TMREV(l10)
+                            
+#ifdef Cpre
+ ; Carbon Presatuaration
+ (p0 pl0 ph20):C
+#endif
+
+;######################################################
+;#              Cross/Direct Polarization             #
+;######################################################
+
+#ifdef DP
+   (p1 pl1 ph10):C
+#else
+                         (p3  pl2  ph1):H
+  (p10:spf0 pl10 ph2):C  (p10 pl20 ph0):H 
+#endif
+
+;######################################################
+;#            Heteronuclear TMREV recoupling          #
+;##########################!###########################
+
+  0.3u pl3:C pl13:H
+  d10 cw:C cw:H
+  0.3u do:C do:H 
+
+(center
+  (0.3u cpds2 TauR TauR 0.3u do):H 
+  (p7:spf7 pl7 ph4):C
+)
+
+if "go_t1>1"
+{                        ;########################## 
+  (d0 cpds2 0.3u do):H   ;#      t1 evolution      #
+                         ;##########################
+}
+
+  (p1 pl1 ph5):C   (p1 pl2):H  ;store
+
+#ifdef SPC52
+  subr SPC5_2exc()
+  subr SPC5_2rec()
+#else
+  subr SPC5_3exc()
+  subr SPC5_3rec()
+#endif
+  subr PDSD_DARR()
+
+  (p1 pl1 ph6):C   (p1 pl2):H  ;readout
+
+0.3u cpds2:H 
+
+;#######################################################
+;#                     Acquisition                     #
+;#######################################################
+
+gosc ph31 	; Start ADC with ph31 signal routing
+
+#ifdef CDC
+  d30           ; Constant duty cycle
+#endif
+
+1m do:H 	; Decoupler off
+
+lo to Start times ns
+
+d1 mc #0 to Start F1PH(id0, dp5 & dd30)
+                  F2QF(iu10, rd0 & rp5 & rd30)
+                  
+HaltAcqu, 1m
+exit
+
+;#######################################################
+;#             Phase Cycle (min=4, full=16)            #
+;#######################################################
+
+ph0=  0
+ph1=  {1}*16 {3}*16
+ph2=  {0}*4 {2}*4
+ph3=  {0}*2 {1}*2 {2}*2 {3}*2  ;TMREV 180
+ph4=  0 1 2 3                  ;Soft Pulse Echo
+ph5=  {3}*8 {1}*8              ;Storage
+ph6=  3 0                      ;Read
+
+ph10= {1}*4^2^2      ; X90 DP
+
+ph31= {2 1}^2^2^2^2
+
+
+;#######################################################
+;#                    SPC5 Phases                      #
+;#######################################################
+
+ph15= (360) 90 162 234 306 18 270 342 54 126 198
+ph16= (360) 270 342 54 126 198 90 162 234 306 18
+ph25= (360) 0 72 144 216 288 180 252 324 36 108
+ph26= (360) 180 252 324 36 108 0 72 144 216 288
+
+;PARAMETERS:
+;p1      : C 90  (pl1)
+;p2      : C 180 (pl1)
+;p3      : H 90  (pl2)
+;p7      : C Soft Refocussing Pulse
+;p0      : C Presat (-DCpre)
+;p10     : HC CP contact pl10 (C) and sp0 (H)
+;sp0     : H CP pwr
+;pl1     : C PRESAT pwr level
+;pl1     : C HP pwr level
+;pl2     : H HP pwr level
+;pl5     : H TMREV pwr level
+;pl28    : C Soft Refocussing PWR
+;pl10    : C CP pwr
+;pl12    : H dec pwr
+;pl13    : H alt dec pwr (Spinlock and CW)
+;cnst5   : Symmetry (inc/rotor period)
+;cnst6   : Base Rotor periods
+;cnst7   : Multiplier 
+;pl15    : C SPC5 pwr
+;l5      : C5 repetitions n*5 (doubled)
+;d1      : recycle delay
+;SPC53mix: mix time POST-C7 (half)
+;pcpd2   : pulse length in decoupling sequence
+;cpdprg2 : cw, tppm (at pl12), or lgs, cwlg. cwlgs (LG-decoupling 
+;spnam0  : use e.g. ramp.100 for variable amplitude CP
+;cnst30  : expected td1 for use in constant Duty (-DCDC)
+;cnst31  : MAS Rate
+;FnMode  : TPPI, States or States-TPPI
+;zgoptns : (-D) D1, DP, CDC, Cpre

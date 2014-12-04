@@ -1,0 +1,14 @@
+;d6_echo_prot.incl
+
+; Test the rf on-time for Spin Echo (d6)
+; 10 ms (20ms total) is allowed
+
+;$COMMENT=Protection against long echo
+;$CLASS=Solids PROT
+;$OWNER=guest
+
+if "d6<10.1m" goto Passd6
+1m
+print "Echo time d6 exceeds 10msec limit!"
+goto HaltAcqu
+Passd6, 1m

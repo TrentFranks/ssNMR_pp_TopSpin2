@@ -1,0 +1,13 @@
+;p8_prot.incl
+
+;protect against long carbon presat time
+;$COMMENT=Carbon Presat protection
+;$CLASS=Solids INCL
+;$OWNER=guest
+
+if "p8<1.1m" goto Passp8
+  1m
+  print "Presat p8 exceeds 1msec limit!"
+  goto HaltAcqu
+Passp8, 1m
+

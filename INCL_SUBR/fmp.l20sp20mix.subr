@@ -1,0 +1,55 @@
+; Transverse R2T SQ-SQ subroutine 
+; adapted by W. Trent Franks Feb. 2010
+; FMP Berlin
+
+; Contents:
+;  R2T 
+;  Costa, PR; Sun B; Griffin, RG;
+;     J. Am. Chem. Soc. 1997, 119, 10821-10830.
+;  R2T w/ DARR 
+
+;#############################
+;#  INCLUDE THESE PARAMETERS #
+;#############################
+;p27    : Rotor Period
+;cnst31 : MAS Frequency
+;
+;########################
+;#  INCLUDE THESE FILES #
+;########################
+;
+;#include <TauR_Defs>
+;
+
+define loopcounter DUOcnt
+
+subroutine Longi_L21S21_(phase pha1, phase pha2, phase pha3)
+{
+  (p1 pl1 pha1):C   (p1 pl2):H 	
+
+  (TauR pl16):H   
+
+shape20,
+  (p20:sp20 pha2):C  (p20 pl13):H  
+lo to shape21 times l20
+
+  (TauRm2 pl16):H   
+  1u pl12:H 
+  1u cpds2:H 
+
+  (p1 pl1 pha3):C                       ;flip back
+}
+
+subroutine Transv_L21S21_(phase pha1, phase pha2)
+{
+  (p1 pl1 pha1):C   (p1 pl2):H 	        ;Purge
+
+shape20,
+  (p20:sp20 pha3):C  (p20 pl13):H  
+lo to shape20 times l20
+
+  0.5u pl12:H 
+  0.5u cpds2:H 
+  
+  (p1 pl1 pha2):C                       ;Purge
+}

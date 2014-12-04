@@ -1,0 +1,107 @@
+; Frequency switched Lee-Goldberg (FSLG)
+; wittern by HF; adapted BVR (Jul 7 2003)
+; Subroutine WTF (Mar 2010)
+; FMP Berlin
+
+; Contents:
+;
+;#############################
+;#  INCREMENT THESE COUNTERS #
+;#############################
+
+;  iu0			;increment evolution loop
+;  du10			;decrement evolution loop
+
+
+
+;#########################
+;#  INCLUDE THESE PHASES #
+;#########################
+;
+;FSLG ()
+;ph
+;ph
+;
+;#############################
+;#  INCLUDE THESE PARAMETERS #
+;#############################
+;
+;l10    : cal total FSLG incr
+;l20    : FSLG periods per increment
+;d4     : z-filter to destroy non-LGS magnetisation, 10-30 usec
+;p5     : cal LG 360 
+;p6     : p5 - 0.3u 
+;pl9    : power level for LG condition
+;cnst21 : 0 for on resonance condition
+;cnst20 : LG-RF 1H field strength, in Hz
+;cnst22 : (+)LG-offset, calculated from cnst20 and cnst24 
+;cnst23 : (-)LG-offset, calculated from cnst20 and cnst24
+;cnst24 : additional 1H offset under LG, usually 0 - -2000
+; cnst24 avoids artefacts
+;cnst25 : LG condition for LGCP at pl15 for 1H
+;in0: 1/(1 * SW) = 2 * DW corrected by FSLG scaling factor
+;nd0: 2
+
+;########################
+;#  INCLUDE THESE FILES #
+;########################
+;
+;  #include <TauR_Defs>
+;
+;#################
+;#  Calculations #
+;#################
+
+"cnst21=0"			       ;make sure cp has original proton freq.
+"cnst22=cnst20/sqrt(2)+cnst24+2000"	;cnst20=desired RF field in Hz
+"cnst23=-cnst20/sqrt(2)+cnst24-2000"	;negative offset is cnst23
+
+
+"p5=((294/360)/(cnst20))*1e6"		;calculate 294 degree pulse from cnst20
+"p6=p5-.3u"				;calculate correction for cpd=cwlgs
+
+"p23=(p3*547)/900"
+"p24=(p3*353)/900"
+
+;###########################
+;# Include in main program #
+;###########################
+
+;"l10=td1+1"
+;"in0=l20*4*p5"
+
+;##############################
+;#  FSLG constant duty cycle  #
+;##############################
+
+subroutine FSLGpre(phase phPL, phase phMN)
+{
+FSLGpre,
+ (p5 phPL fq=cnst22 pl13):f2	        ;fslg loop at pl13, LG frequ. 1
+  p5:f2 phMN fq=cnst23:f2		;fslg loop at pl13, LG frequ. 2
+  p5:f2 phPL fq=cnst22:f2 		;fslg loop at pl13, LG frequ. 1
+  p5:f2 phMN fq=cnst23:f2		;2 LG periods total
+  lo to FSLGpre times l20
+  lo to FSLGpre times l10
+
+  10u fq=cnst21:f2
+}
+
+
+;###################
+;#  FSLG evolution #
+;###################
+
+subroutine FSLGevol(phase phPL, phase phMN)
+{
+;(center
+;(p2 pl1 phPL):f1
+;)
+FSLGev,
+ (p5 phPL fq=cnst22 pl13):f2	;fslg loop at pl13, LG frequ. 1
+  p5:f2 phMN fq=cnst23:f2		;fslg loop at pl13, LG frequ. 2
+  p5:f2 phPL fq=cnst22:f2 		;fslg loop at pl13, LG frequ. 1
+  p5:f2 phMN fq=cnst23:f2		;2 LG periods total
+  lo to FSLGev times l20
+  lo to FSLGev times l0
+}

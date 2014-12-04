@@ -1,0 +1,21 @@
+;Define Frequencies, Rotor Timings, and other common variables 
+;Use with Carbon (X-channel) Detection  
+;by W.Trent Franks (TopSpin 2.3)
+;          adapted from an example on Bax website
+
+;$COMMENT=Frequency and Timing definitions
+;$CLASS=Solids INCL
+;$TYPE=Definitions
+;$SUBTYPE=Carbon Detect
+;$OWNER=franks
+
+#define C f1
+#define H f2
+#define N f3
+
+define delay TauR
+  "TauR=1s/cnst31"
+define delay TauRm2
+  "TauRm2=1s/cnst31 - 2u"
+define delay TauRm4
+  "TauRm4=1s/cnst31 - 4u"

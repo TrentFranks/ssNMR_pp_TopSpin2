@@ -1,0 +1,194 @@
+;CC with DQ POST-C7 mixing (TopSpin 2.3)
+
+;######################################################
+;#                                                    #
+;# POST-C7_2 with double quantum filter               #
+;#  M. Hohwy, H. J. Jakobsen, M. Eden, M. H. Levitt,  #
+;#  N. C. Nielsen; J. Chem. Phys. 1998 107 2686-2694  #
+;#                                                    #
+;# Adjust pl17=7*wr for MINIMUM in intensity.         #
+;#  l7 is a multiple of 7, Adjust for MINIMUM         #
+;#                                                    #
+;#  ns = n*4 (full cycle =16); pl17= 7*wr; l7 >= n*7  #
+;#                                                    #
+;#  Indirect Dimension phasing is 90,-180             #
+;#                                                    #
+;######################################################
+;  
+; Options DP, Cpre, CDC
+; written Barth van Rossum, W Trent Franks
+
+;$COMMENT= HC CP with C DQ mixing
+;$CLASS=Solids
+;$DIM=2D
+;$TYPE=Homonuclear
+;$SUBTYPE=DQ mix
+;$OWNER=guest
+
+;prosol relations=<solids_cp>
+
+;#include <Avancesolids.incl>
+#include <C_detect_def.incl>
+
+;######################################################
+;#                   Define Mixing                    #
+;######################################################
+
+#include <fmp.POSTC7.subr>
+
+;cnst11 : adjust t=0 for acq, if digmod = baseopt
+"acqt0=1u*cnst11"
+
+"in0=inf1"                  ;##########################
+"d0=in0/2-0.3u-p1*2/3.14159";#   t1_init => 90,-180   #
+"in30=inf1"                 ;#                        #
+define loopcounter go_t1    ;#   No increment if 1D   #
+"go_t1=td1"                 ;##########################
+
+define delay ONTIME         ;##########################
+define loopcounter T1evo    ;# Power Deposition Calcs #
+"T1evo=larger(td1,cnst30)"  ;#   Constant Duty Cycle  #
+"d30=T1evo*in30"            ;##########################
+                            
+                            ;##########################
+;$EXTERN                    ;# python insertion point #
+                            ;##########################
+
+Prepare, ze
+
+"d30=d30/2"                 ;#divide by 2 for mc macro#
+"ONTIME=aq+d0+d30+p10+p8+2*C72mix"
+
+;######################################################
+;#               Protections: Pre-Check               #
+;######################################################
+
+#include <Standard_Prot.incl>
+        ;acquisition, CP time, PDSD/DARR, and echo restrictions
+#include <POSTC7_prot.incl>
+        ;loop l7 
+#include <t1_prot.incl>
+        ;check t1 evolution time
+#include <ONTIME_prot.incl>
+        ;total RF depsosition restriction
+
+;######################################################
+;#           Start of Active Pulse Program            #
+;######################################################
+
+Start, d1 do:H 
+
+  1m rpp17                  ;##########################  
+  1m rpp18                  ;#  C7 phases reset here  #
+  1m rpp27                  ;##########################
+  1m rpp28
+ 
+;######################################################
+;#               Protections: In Situ                 #
+;######################################################
+
+; d0,d30 checked every row                            
+#include <t1evol_prot.incl> 
+                            
+#ifdef CPRE
+ ; Carbon Presatuaration
+ (p0 pl0 ph20):C
+#endif
+
+;######################################################
+;#              Cross/Direct Polarization             #
+;######################################################
+
+#ifdef DP
+   (p1 pl1 ph10):C
+#else
+                         (p3  pl2  ph1):H
+  (p10:spf0 pl10 ph2):C  (p10 pl20 ph0):H 
+#endif
+
+if "go_t1>1"
+{                           ;##########################
+  d0 cpds2:H                ;#      t1 evolution      #
+  0.3u do:H                 ;##########################
+}
+
+;######################################################
+;#            Homonuclear POST-C7_2 Mixing            #
+;##########################!###########################
+
+  (p1 pl1 ph3):C   (p1 pl2):H  ;store
+
+  subr C7_2exc()
+  subr C7_2rec()
+  
+  (p1 pl1 ph4):C   (p1 pl2):H  ;readout
+    
+  0.3u cpds2:H 
+
+;#######################################################
+;#                     Acquisition                     #
+;#######################################################
+
+gosc ph31 	; Start ADC with ph31 signal routing
+
+#ifdef CDC
+  d30           ; Constant duty cycle
+#endif
+
+1m do:H 	; Decoupler off
+
+lo to Start times ns
+
+d1 mc #0 to Start F1PH(dp3,id0 & dd30) 
+
+HaltAcqu, 1m
+exit
+
+;#######################################################
+;#             Phase Cycle (min=4, full=16)            #
+;#######################################################
+
+ph0=  0
+ph1=  1 3
+ph2=  {0}*8 {2}*8
+ph3=  1 1 3 3 
+ph4=  1 1 2 2 3 3 0 0  
+
+ph10= 1 3 3 1 2 0 0 2  ; X90 DP
+
+ph20= 0 2
+
+;#######################################################
+;#                  POST-C7_2 Phases                   #
+;#######################################################
+
+ph17=(65536) 0 9362 18725 28087 37449 46811 56174 
+ph18=(65536) 32768 42130 51493 60855 4681 14043 23406
+ph27=(65536) 16384 25746 35109 44471 53833 63195 7022 
+ph28=(65536) 49152 58514 2341 11703 21065 30427 39790
+
+ph31= 2 0 1 3 0 2 3 1 0 2 3 1 2 0 1 3
+
+;PARAMETERS:
+;p1      : C 90  (pl1)
+;p2      : C 180 (pl1)
+;p3      : H 90  (pl2)
+;p8      : C Presat (-DCpre)
+;p10     : HC CP contact pl10 (C) and sp0 (H)
+;sp0     : H CP pwr
+;pl1     : C HP pwr level
+;pl2     : H HP pwr level
+;pl10    : C CP pwr
+;pl12    : H dec pwr
+;pl13    : H alt dec pwr (Spinlock and CW)
+;pl17    : C POST-C7 pwr
+;l7      : C7 repetitions n*7 (doubled)
+;d1      : recycle delay
+;C72mix  : mix time POST-C7 (half)
+;pcpd2   : pulse length in decoupling sequence
+;cpdprg2 : cw, tppm (at pl12), or lgs, cwlg. cwlgs (LG-decoupling 
+;spnam0  : use e.g. ramp.100 for variable amplitude CP
+;cnst30  : expected td1 for use in constant Duty (-DCDC)
+;cnst31  : MAS Rate
+;FnMode  : TPPI, States or States-TPPI
+;zgoptns : (-D) D1, DP, CDC, CPRE

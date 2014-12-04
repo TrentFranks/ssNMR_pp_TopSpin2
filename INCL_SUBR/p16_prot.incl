@@ -1,0 +1,16 @@
+;p16_prot.incl
+
+; Test the rf on-time for NC CP (w/H dec)
+; 10ms is maximum
+
+;$COMMENT=Protection against long NC CP time
+;$CLASS=Solids PROT
+;$OWNER=guest
+
+if "p16<10.1m" goto Passp16
+  1m 
+  print "NC CP time p16 exceeds 10msec limit"
+  goto HaltAcqu
+Passp16, 1m
+
+

@@ -1,0 +1,110 @@
+;hN
+
+;Cross Polarization for Y channel (15N)
+;written by WTF
+;Avance II+ version
+
+;######################################################
+;#                                                    #
+;# H-N Cross Polarization Experiment                  #
+;#                                                    #
+;#  Adjust pl11, pl19, and p11 for maximum signal.    #
+;#  The Hartman-Hahn CP condidition is B1(H)=B1(N)+-1 #
+;#  sp1 is usually a linear or tangent ramp           #
+;#  p11 is usually 1 ms                               #
+;#                                                    #
+;######################################################
+
+;$COMMENT= H-Y CP
+;$CLASS=Solids
+;$DIM=1D
+;$TYPE=CPMAS
+;$SUBTYPE=Setup
+;$OWNER=guest
+
+define delay ONTIME
+;prosol relations=<solids_cp>
+
+;#include <Avancesolids.incl>
+#include <N_detect_def.incl>
+#include <fmp.RespirationCP.subr>
+
+;cnst11 : to adjust t=0 for acquisition, if digmod = baseopt
+"acqt0=1u*cnst11"
+                            ;##########################
+;$EXTERN                    ;# Python insertion point #
+                            ;##########################
+Prepare, ze
+
+;######################################################
+;#               Protections: Pre-Check               #
+;######################################################
+
+"ONTIME=aq+p11+HC_RESP_mix"
+
+#include <Standard_Prot.incl>
+#include <HN_RESPIRATION_prot.incl>
+        ;acq, CP time, etc.
+#include <ONTIME_prot.incl>
+        ;total RF depsosition restriction
+
+;######################################################
+;#           Start of Active Pulse Program            #
+;######################################################
+
+Start, d1 do:H
+
+                         (p3  pl2 ph1):H 
+  ;(p11:spf1 pl11 ph2):N  (p11 pl19 ph0):H
+
+  subr HN_RESPIRATION(ph2)
+
+  0.3u cpds2:H  ;decouple 1H during acquisition
+
+;#######################################################
+;#                     Acquisition                     #
+;#######################################################
+
+  go=Start ph31
+  10m do:H
+  30m mc #0 to Start F0(zd)
+
+HaltAcqu, 1m
+exit
+
+ph0 = 0
+ph1 = 1 3
+ph2 = 0 0 2 2
+
+ph20=0
+ph21=1
+ph22=2
+ph23=3
+
+ph31= 0 2 2 0 ; receiver
+
+;#######################################################
+
+;PARAMETERS: 
+;p3      : H 90 at pl2
+;p4      : H 180 at pl2
+;p11     : H-N CP contact pl11 (f1) and sp1 (f2)
+;p16     : SPIN LOCK duration after CP 
+;p21     : N 90 (pl21) use -Dp90  
+;p22     : N 180 (pl21) use -Decho
+;sp1     : H CP pwr
+;pl2     : H HP pwr
+;pl7     : N Spin Lock pwr -Dspinlock
+;pl11    : N CP pwr 
+;pl12    : H dec pwr
+;pl13    : H alt dec pwr (Spinlock and CW)
+;pl21    : N HP pwr
+;d1      : recycle delay
+;d2      : H Inversion Recovery Time
+;d6      : Echo delay -Decho
+;pcpd2   : pulse length in decoupling sequence
+;cpdprg2 : cw, tppm (at pl12), or lgs, cwlg. cwlgs (LG-decoupling 
+;spnam1  : use e.g. ramp.100 for variable amplitude CP
+;zgoptns : (-D) lacq
+
+

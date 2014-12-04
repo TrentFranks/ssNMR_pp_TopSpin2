@@ -1,0 +1,60 @@
+; Longitudinal Dream SQ-SQ subroutine 
+; W. Trent Franks Jan. 2011
+; FMP Berlin
+
+;######################################################
+;#                                                    #
+;#  Dream:                                            #
+;#  Verel, R; Ernst M; Meier, BH;                     #
+;#     J. Magn. Reson. 2001, 150, 81-99.              #
+;#                                                    #
+;######################################################
+
+;######################################################
+;#                                                    #
+;#  sp21 should vary about 0.5*wr,                    #
+;#    e.g. if spinning at 20 kHz, the Dream Field     #
+;#    is 10 kHz, then the ramp is generally about     #
+;#    5kHz (+/-50% of total)                          #
+;#                                                    #
+;#  spnam20 should be a tangent ramp as described     #
+;#  spnam18 Linear ramp from 0 to the beginning of    #
+;#            sp20                                    #
+;#  spnam19 Linear ramp from end of sp20 to           #
+;#            sp20                                    #
+;#  sp21= |0.5*wr| ; p19  READ-IN/OUT ;               #
+;#                                                    #
+;#  p20 READ-IN/OUT ~= 0.5-1 rotor period             #
+;#  p20 Mix duration  ~0.5 ms for 1 bond transfer     #
+;#  pl15(SPC5_2)= 5*wr; l5 >= n*10 ; ns = n*4         #
+;#                                                    #
+;#                                                    #
+;######################################################
+
+;#############################
+;#  INCLUDE THESE PARAMETERS #
+;#############################
+;
+;p19     : Read-in/out (0.5-1 rotor period)
+;p20     : Dream duration
+;pl13    : H ampl during DREAM
+;sp18    : Read-IN pwr
+;sp19    : Read-OUT pwr
+;sp20    : Dream pwr
+;cnst31  : MAS Frequency
+;
+;########################
+;#  INCLUDE THESE FILES #
+;########################
+;
+;#include <TauR_Defs>
+;
+
+subroutine DREAM_(phase pha2)
+{
+  0.3u pl13:H cw:H
+  (p19:spf18 pl20 pha2):C   ; Read-in
+  (p20:spf20 pl20 pha2):C   ; Mix
+  (p19:spf19 pl20 pha2):C   ; Read out
+  0.3u do:H 
+}

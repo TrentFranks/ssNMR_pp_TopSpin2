@@ -1,0 +1,16 @@
+;d28_CDC_prot.incl
+
+; Test the rf on-time for t1 evolution
+; 25 ms is allowed
+
+;$COMMENT=Protection against t1 evolution
+;$CLASS=Solids PROT
+;$OWNER=guest
+
+if "d29<25.1m" goto Passd29
+print "t3 evolution time exceeds 25msec limit!"
+goto HaltAcqu
+Passd29, 1m
+
+
+

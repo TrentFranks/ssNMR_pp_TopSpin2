@@ -1,0 +1,213 @@
+;HC Proton-Detect INEPT x-fer experiment (TopSpin 2.3)
+
+;######################################################
+;#                                                    #
+;#  HC Hetcor for solids                              #
+;#                                                    #
+;######################################################
+;
+;$COMMENT= HC INEPT Transfer Experiment
+;$CLASS=Solids
+;$DIM=2D
+;$TYPE= 1H detect Hetero
+;$SUBTYPE=CP Transfer
+;$OWNER=guest
+;
+#include <HCD_defs.incl>
+
+;######################################################
+;#                Evolution Parameters                #
+;######################################################
+
+"in0=inf1"                  ;##########################
+"d0=3u"                     ;#     t1_init => 0,0     #
+"in2=inf1/2"                ;##########################
+
+"in21=inf1/2"               ;##########################
+                            ;#     Constant Time      #
+"in22=inf1/2"               ;##########################
+
+"p25=(0.5s/cnst31)-(p26/2)"
+
+define loopcounter go_t1
+"go_t1=td1"
+
+define delay TauRmRESP
+"TauRmRESP=(1s/cnst31) - p31/4"
+"p32=p31/4"
+
+define loopcounter T1evo 
+"T1evo=larger(td1,cnst30)"
+
+"d2=TauR+(T1evo*in2)"
+
+"d21=TauR + in0*T1evo/2 - p22/2"
+"d22=TauR + in0*T1evo/2 - p22/2"
+
+define delay ONTIME
+
+                            ;##########################
+;$EXTERN                    ;# python insertion point #
+                            ;##########################
+
+Prepare, ze
+
+"d2=d2/2"                   ;# divide by 2 for mc macro #
+"d21=d21/2"                   ;# divide by 2 for mc macro #
+"d22=d22/2"                   ;# divide by 2 for mc macro #
+
+;######################################################
+;#               Protections: Pre-Check               #
+;######################################################
+
+"ONTIME=aq+p10+p12+p18*4+d2*2+d18"
+
+#include <1H_ON_prot.incl>
+        ;total RF depsosition restriction
+; Protections for Proton Presat, H Acq, etc
+
+;######################################################
+;#           Start of Active Pulse Program            #
+;######################################################
+
+Start, d1 do:C do:D
+
+;######################
+;#      PRESAT        #
+;######################
+
+#ifdef Pre
+  3u pl18:H
+  d18 cw:H ph20
+  d13 do:H
+#endif
+
+;#####################
+;#       DC CP       #
+;#####################
+
+                         (p32 pl31 ph1):D
+                         TauRmRESP
+                         (p32):D
+                         TauRmRESP
+                         (p32):D
+                         TauRmRESP
+                         (p32):D
+
+;  (p25 pl32 ph2):C  (p25:spf0 pl30 ph0):D 
+;  (p15:spf10 pl1 ph2):C (p15:spf30 pl31 ph0):D		 		
+
+RESPIRATION,
+ (p25 ph20):C
+ (p25 ph22):C
+ (p26 ph2):D (p26 ph20):C
+ lo to RESPIRATION times l1
+
+  0.2u pl12:H
+
+;##########################
+;#  Time evolution on Sx  #
+;##########################
+ 
+
+#ifdef CT
+ 1u cpds2:H
+  d21  
+  (p2 pl1 ph3):C
+  d22
+
+ (p1 pl1 ph4):C 
+ 1u do:H
+
+#else
+
+ 1u cpds2:H
+
+if "d0 > (p1*2 + p2)"
+{
+    d0
+}
+
+  1u
+  (p1 pl1 ph4):C    ;13C 90 pulse 
+  d2
+  1u do:H
+
+#endif
+
+;###############
+;# MISSISSIPPI #
+;###############
+
+  (p18 pl18 ph20):f1
+  (p18 ph21):f1
+  (p18 ph20):f1
+  (p18 ph21):f1
+
+
+;####################
+;#  CP Back to 1H   #
+;####################
+  
+  1u 
+  (p1 ph5):C
+  (p12:spf12 pl10 ph6):C (p12 pl20 ph7):H
+
+  0.5u pl3:D pl4:C     ; GARP power on 13C
+  1u  cpds3:D cpds4:C
+
+  go=Start ph31
+  1m do:D do:C
+  
+#ifdef CT
+  30m mc #0 to Start
+        F1PH(dp4, id0 & dd2 & id21 & dd22)
+#else
+  30m mc #0 to Start
+        F1PH(ip4, id0 & dd2 & id21 & dd22)
+#endif
+
+HaltAcqu, 1m
+exit
+
+;#####################
+;#  Phase Cycle, n>4 #
+;#####################
+
+
+ph0= 1 1		;H HX
+ph1= 0 0 2 2		;D90
+ph2= {0}*4 {2}*4		;DRESP
+
+ph3= 1; 1		;X180 (CT)
+ph4= 3 1		;X901
+ph5= 1; 3		;X902
+ph6= 0; 0		;X XH
+ph7= 1; 1		;H XH
+
+ph20= 0; sat
+ph21= 1; sat2
+ph22= 2
+
+ph31= 1 3 3 1   3 1 1 3 ; 1 3  ; Rec
+
+;######################################################################
+
+;PARAMETERS:
+;p1      : C 90 at pl1
+;p2      : C 180 at pl1
+;p3      : H 90 at pl2
+;p4      : H 180 at pl2
+;p5      : H spinlock purge
+;p31     : D 90 pl21
+;p32     : D 180 pl21
+;d0      : initial t1 (3u)
+;d1      : recycle delay
+;d2      : total t1 ev time
+;NS      : 4 * n
+;DS      : >= 4
+;pl1     : C HP pwr level
+;pl2     : H HP pwr level
+;pl31    : D HP pwr level
+;cpds3   : D dec cpdprg3
+;zgoptns : (-D) Pre, PP

@@ -1,0 +1,227 @@
+;HN Proton-Detect CP x-fer experiment (TopSpin 2.3)
+
+;######################################################
+;#                                                    #
+;#  HN with echo for T2 measurment                    #
+;#                                                    #
+;######################################################
+;
+;$COMMENT= HN CP Transfer Experiment
+;$CLASS=Solids
+;$DIM=2D
+;$TYPE= 1H detect Hetero
+;$SUBTYPE=CP Transfer
+;$OWNER=guest
+;
+#include <HCN_defs.incl>
+
+;######################################################
+;#                Evolution Parameters                #
+;######################################################
+
+"in0=inf1"                  ;##########################
+"d0=3u"                     ;#     t1_init => 0,0     #
+"in2=inf1"                  ;##########################
+
+"in21=inf1/2"               ;##########################
+                            ;#     Constant Time      #
+"in22=inf1/2"               ;##########################
+
+
+define loopcounter go_t1
+"go_t1=td1"
+
+define loopcounter T1evo 
+"T1evo=larger(td1,cnst30)"
+
+"d2=TauR+(T1evo*in2)"
+
+"d21=TauR + in0*T1evo/2 - p22/2"
+"d22=TauR + in0*T1evo/2 - p22/2"
+"d16=d16-d15"
+
+define delay ONTIME
+
+                            ;##########################
+;$EXTERN                    ;# python insertion point #
+                            ;##########################
+
+Prepare, ze
+
+"d2=d2/2"                     ;# divide by 2 for mc macro #
+"d21=d21/2"                   ;# divide by 2 for mc macro #
+"d22=d22/2"                   ;# divide by 2 for mc macro #
+
+;######################################################
+;#               Protections: Pre-Check               #
+;######################################################
+
+"ONTIME=aq+p11+p13+p18*4+d2+d18+d16"
+
+#include <1H_ON_prot.incl>
+        ;total RF depsosition restriction
+; Protections for Echo time
+#include <d15_prot.incl>
+#include <d16_prot.incl>
+
+;######################################################
+;#           Start of Active Pulse Program            #
+;######################################################
+
+Start, d1 do:C do:N 
+
+;######################
+;#      PRESAT        #
+;######################
+
+#ifdef Pre
+  3u pl18:H
+  d18 cw:H ph20
+  d13 do:H
+#endif
+
+;#####################
+;#       HN CP       #
+;#####################
+
+                         (p3  pl2 ph1):H
+  (p11:spf1 pl11 ph2):N  (p11 pl19 ph0):H 
+
+;##########################
+;#  Time evolution on Sx  #
+;##########################
+
+#ifdef CT
+ 1u cpds2:H
+ 
+;#  T2 echo on Sx  #
+  
+  (center
+  (d15):C 
+  (p22 pl21 ph10):N
+  )
+ 
+  d21  
+  (p22 pl21 ph3):N
+  d22
+ 
+ (p21 pl21 ph4):N
+ d16
+ 1u do:H
+
+#else
+
+ 1u cpds2:H
+ 
+;#  T2 echo on Sx  #
+  
+  (center
+  (d15):C 
+  (p22 pl21 ph10):N
+  )
+
+if "d0 > (p1*2 + p2)"
+{
+  (center
+    (d0):N
+    (p1 pl1 ph20 p2 ph21 p1 ph20):C
+  )
+}
+
+  1u
+  (p21 pl21 ph4):N
+  d2
+  d16
+  1u do:H
+
+#endif
+
+
+
+;###############
+;# MISSISSIPPI #
+;###############
+
+  (p18 pl18 ph20):f1
+  (p18 ph21):f1
+  (p18 ph20):f1
+  (p18 ph21):f1
+
+
+;####################
+;#  CP Back to 1H   #
+;####################
+
+  1u
+  (p21 ph5):N
+  (p13:spf13 pl11 ph6):N (p13 pl19 ph7):H
+
+  0.5u pl3:N pl4:C     ; GARP power on 15N
+  1u  cpds3:N cpds4:C
+
+  go=Start ph31
+  1m do:N do:C
+
+#ifdef CT
+  30m mc #0 to Start
+        F1PH(dp4, id0 & dd2 & id21 & dd22)
+	
+#else
+  30m mc #0 to Start
+        F1PH(ip4, id0 & dd2 & id21 & dd22)
+	
+#endif
+
+HaltAcqu, 1m
+exit
+
+;#####################
+;#  Phase Cycle, n>4 #
+;#####################
+
+
+ph0= 1 1		;H HX
+ph1= 0 0 2 2		;H90
+ph2= 0 0 0 0 2 2 2 2	;X HX
+ph3= 1 1		;X180 (CT)
+ph4= 3 3		;X901
+ph5= 1 3		;X902
+ph6= 0 0		;X XH
+ph7= 1 1		;H XH
+ph10= 1 1		;X180 (T2 echo)
+
+ph20= 0; sat
+ph21= 1; sat2
+ph22= 2
+
+ph31= 1 3 3 1 3 1 1 3 ; Rec
+
+;###############################################################
+
+;PARAMETERS:
+;p1      : C 90 at pl1
+;p2      : C 180 at pl1
+;p3      : H 90 at pl2
+;p4      : H 180 at pl2
+;p5      : H spinlock purge
+;p11     : HN CP
+;p13		 : NH CP
+;p18     : H presat x4
+;p21     : N 90 pl21
+;p22     : N 180 pl21
+;d0      : initial t1 (3u)
+;d1      : recycle delay
+;d2      : total t1 ev time
+;d15	 : T2 echo delay
+;d16	 : T2 echo max
+;d21		 : extra 
+;d22     : 
+;NS      : 4 * n
+;DS      : >= 4
+;pl3     : N acq dec pwr level
+;pl4		 : C acq dec pwr level
+;pl11    : N CP pwr level
+;pl19    : H CP pwr level
+;pl21    : N 90 pwr level
+;cpds3   : N dec cpdprg3
+;zgoptns : (-D) Pre, PP, CT

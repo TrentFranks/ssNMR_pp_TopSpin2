@@ -1,0 +1,160 @@
+;HH NOE experiment (TopSpin 2.3)
+
+;######################################################
+;#                                                    #
+;#  HN NOESY for solids                                #
+;#                                                    #
+;######################################################
+;
+;$COMMENT= HH NOESY Transfer Experiment
+;$CLASS=Solids
+;$DIM=2D
+;$TYPE= 1H detect Hetero
+;$SUBTYPE=Dipolar Transfer
+;$OWNER=guest
+;
+#include <HCN_defs.incl>
+
+;######################################################
+;#                   Define Mixing                    #
+;#    NOESY is Default, add Selective 90 w/ option    #
+;######################################################
+
+#include <fmp.HNOE.subr>
+#include <fmp.1H_SPC5.subr>
+
+;cnst11 : adjust t=0 for acq, if digmod = baseopt
+"acqt0=1u*cnst11"
+
+define delay ONTIME
+                            ;##########################
+;$EXTERN                    ;# python insertion point #
+                            ;##########################
+
+Prepare, ze
+
+"ONTIME=aq"                 ;#  DARR left out   #
+
+;######################################################
+;#               Protections: Pre-Check               #
+;######################################################
+
+#include <1H_ON_prot.incl>
+        ;total RF depsosition restriction
+
+;######################################################
+;#           Start of Active Pulse Program            #
+;######################################################
+
+Start, d1 do:C do:N
+
+;######################
+;#      PRESAT        #
+;######################
+
+  1m rpp10                  ;##########################  
+  1m rpp11                  ;#  C5 phases reset here  #
+  1m rpp12                  ;##########################
+  1m rpp13
+
+
+#ifdef PRE
+  3u pl9:H
+  d18 cw:H ph20
+  4u do:H
+#endif
+
+#ifdef PURGE
+  5u
+  (p23:spf23 pl23 ph0):H
+  5u
+  d5
+#endif
+
+#ifdef SInv
+  5u
+  (p24:spf24 pl24 ph0):H
+  5u
+  d5
+#endif
+
+#ifdef SPC52
+  subr H_SPC5_2exc()
+  subr H_SPC5_2rec_dq()
+#endif
+
+#ifndef SPC52
+  subr H_SPC5_3exc()
+  subr H_SPC5_3rec_dq()
+#endif
+  
+  (p3 pl2 ph1):H
+  3u
+
+;#######################################################
+;#                     Acquisition                     #
+;#######################################################
+
+  0.5u pl3:N pl4:C     ; GARP power on 15N
+  1u  cpd3:N cpd4:C
+
+gosc ph31 	; Start ADC with ph31 signal routing
+
+20m ip10*90;*(nsdone%1)
+20m ip11*90;*(nsdone%1)  ; DQF, add 2 to rec phase every 2nd scan
+1m do:C do:N
+
+lo to Start times ns
+
+30m mc #0 to Start F0(zd)
+
+HaltAcqu, 1m
+exit
+
+;#######################################################
+;#             Phase Cycle (min=4, full=16)            #
+;#######################################################
+
+ph0=  2 1 0 3 
+ph1=  0 0 2 2
+
+;1H SPC5
+
+ph10= (360) 90 162 234 306 18 270 342 54 126 198
+ph11= (360) 270 342 54 126 198 90 162 234 306 18
+ph12= (360) 0 72 144 216 288 180 252 324 36 108
+ph13= (360) 180 252 324 36 108 0 72 144 216 288
+
+ph20= 0
+
+ph31= 0 2 2 0
+
+;PARAMETERS:
+;p1      : C 90  (pl1)
+;p2      : C 180 (pl1)
+;p3      : H 90  (pl2)
+;p8      : C Presat (-DCpre)
+;p6      : C soft 90  (pl26)
+;p10     : HC CP contact pl10 (C) and sp0 (H)
+;sp0     : H CP pwr
+;pl1     : C HP pwr
+;pl2     : H HP pwr
+;pl3     : N dec pwr
+;pl4     : C dec pwr
+;pl10    : C CP pwr
+;pl12    : H dec pwr
+;pl13    : H alt dec pwr (Spinlock and CW)
+;pl16    : H DARR pwr (DARR = MAS freq; PDSD =120)
+;pl26    : C soft 90 pwr
+;l15     : 1H C elements (x5; x10 for full CSA compensation)
+;pl25    : 1H C5 X ampl (10wr/3 (SPC5_3) or 5wr (SPC5_2)
+;d1      : recycle delay
+;d8      : PDSD/DARR mix time
+;pcpd2   : pulse length in decoupling sequence
+;cpdprg2 : cw, tppm (at pl12), or lgs, cwlg. cwlgs (LG-decoupling 
+;spnam0  : use e.g. ramp.100 for variable amplitude CP
+;spnam6  : C soft 90 purge pulse (e.g. eSNOB)
+;cnst30  : expected td1 for use in constant Duty (-DCDC)
+;cnst31  : MAS Rate
+;FnMode  : TPPI, States or States-TPPI
+;zgoptns : (-D) PRE, PURGE

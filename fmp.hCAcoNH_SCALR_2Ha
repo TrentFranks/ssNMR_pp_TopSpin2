@@ -1,0 +1,326 @@
+;hCcNH Proton-Detect CP x-fer experiment (TopSpin 2.3)
+
+;######################################################
+;#                                                    #
+;#  hCcNH 3D for solids                               #
+;#  Carbon-Carbon J-based mixing		      #	
+;#  Note: now with a freq hop before the specific cp  #
+;#  made the s180 always on for phase cycle reasons   #
+;######################################################
+;
+;$COMMENT= hCcNH Proton-Detect CP experiment
+;$CLASS=Solids
+;$DIM=3D
+;$TYPE= 1H detect Hetero
+;$SUBTYPE=CP Transfer
+;$OWNER=guest
+;
+#include <HCN_defs.incl>
+#include <D_defs.incl>
+#include <Avance.incl> 
+;for 2H decoupling
+
+;######################################################
+;#                Evolution Parameters                #
+;######################################################
+
+"in0=inf2"                  ;##########################
+"d0=3u"                     ;#     t1_init => 0,0     #
+"in30=inf2"                 ;# in10 is divided by 2		#											
+"in10=inf1/2"               ;# because of the s180    #
+"d10=in10/2-0.3u "          ;#   t2_init => 90,-180   #
+"in29=inf1"                 ;##########################			
+
+"cnst11=o2"									; to reset later
+
+define loopcounter T1evo    ;############################
+"T1evo=larger(td1,cnst29)"  ;#   Constant Duty Cycle    #
+"d29=TauR+T1evo*in29"       ;#                          #
+"d29=d29/2"                 ;# divide by 2 for mc macro #
+define loopcounter T2evo    ;# Power Deposition Calcs   #
+"T2evo=larger(td2,cnst30)"  ;#                          #
+"d30=TauR+T2evo*in30"       ;############################
+"d30=d30/2"                 ;# divide by 2 for mc macro #
+
+define delay ONTIME
+
+                            ;##########################
+;$EXTERN                    ;# python insertion point #
+                            ;##########################
+
+aqseq 321
+
+
+Prepare, ze
+
+;######################################################
+;#              2H decoupling setup                   #
+;######################################################
+  30m LOCKDEC_ON
+  30m LOCKH_ON
+  30m H2_PULSE
+
+;######################################################
+;#               Protections: Pre-Check               #
+;######################################################
+
+"ONTIME=aq+p3+p10+p1*2+p16+p11+p13+p21*2+p20+d29+d30+d18+d11*2+d12*2"
+
+#include <1H_ON_prot.incl>
+        ;total RF depsosition restriction
+	;Protections for Proton Presat, H Acq, etc
+#include <t1_prot_v2.incl>
+        ;check t1 evolution time
+#include <t2_prot_v2.incl>
+        ;check t1 evolution time
+
+;######################################################
+;#           Start of Active Pulse Program            #
+;######################################################
+
+Start, 30m do:C do:N 
+1u fq=cnst11(bf hz):C			;reset carrier 
+
+;######################################################
+;#              2H lock                               #
+;######################################################
+  30m H2_LOCK
+  30m LOCKH_OFF
+  d1 
+  30m LOCKH_ON
+  30m H2_PULSE
+
+;######################################################
+;#               Protections: In Situ                 #
+;######################################################
+
+#include <t1evol_prot_v2.incl>
+            ;check d0 and d30
+#include <t2evol_prot_v2.incl>
+            ;check d10 and d29
+
+;######################
+;#      PRESAT        #
+;######################
+
+#ifdef Pre
+  3u pl18:H
+  d18 cw:H ph20
+  d13 do:H
+#endif
+
+;#####################
+;#       HC CP       #
+;#####################
+
+                         (p3  pl2 ph1):H
+  (p10:spf0 pl10 ph2):C  (p10 pl20 ph0):H 
+
+;##########################
+;#  Time evolution on Cx  #
+;##########################
+
+  1u cpds2:H
+  (d10):N
+  (center
+    (p8:spf8 pl28 ph13):C  ;"CA soft pulse"
+    (p21 pl21 ph20 p22 ph21 p21 ph20):N
+  )  
+  (p2 pl1 ph14):C
+  (d10):N
+  1u
+  (p1 pl1 ph3):C
+  d29
+  (p1 pl1 ph4):C
+
+;##########################
+;# INEPT based C-C mixing #
+;##########################
+
+  1u fq=cnst10(bf hz):C	    ;hop to off res point
+  (p9:spf9 pl29 ph15):C     ;"CO soft pulse"
+  (d12):C 									; tau for INEPT 1/4j ~4.7 ms 
+  1u fq=cnst11(bf hz):C			;reset carrier 
+  (p8:spf8 pl28 ph16):C     ;"CA soft pulse"
+  1u fq=cnst10(bf hz):C	    ;hop to off res point
+  (p9:spf9 pl29 ph17):C     ;"CO soft pulse"
+  (d12):C 									; tau for INEPT 1/4j ~4.7 ms 
+  1u fq=cnst11(bf hz):C			;reset carrier
+  (p1 pl1 ph18):C   
+  (d11):C 									; tau for INEPT 1/4j ~4.7 ms 
+  (p2 pl1 ph19):C
+  (d11):C 									; tau for INEPT 1/4j ~4.7 ms 
+
+;##########################
+;# 	Frequency hop     #
+;##########################
+0.3u fq=cnst10(bf hz):C
+  1u do:H
+
+#ifdef opt
+  1u cpds2:H
+  (p8:spf8 pl28 ph23):C
+  (p2 pl1 ph24):C
+  1u do:H
+#endif
+
+;##########################
+;#  	CN CP		  #
+;##########################
+
+ (p16:spf3 pl6 ph5):C (p16 pl13 ph1):H (p16:spf2 pl7 ph6):N  
+
+0.3u
+
+
+;##########################
+;#  Time evolution on Nx  #
+;##########################
+
+ 1u cpds2:H
+
+if "d0 > (p1*2 + p2)"
+{
+  (center
+    (d0):N
+    (p1 pl1 ph20 p2 ph21 p1 ph20):C
+  )
+}
+
+  1u
+  (p21 pl21 ph7):N
+  d30
+  1u do:H
+
+
+;###############
+;# MISSISSIPPI #
+;###############
+
+  (p18 pl18 ph20):f1
+  (p18 ph21):f1
+  (p18 ph20):f1
+  (p18 ph21):f1
+
+
+;####################
+;#  CP Back to 1H   #
+;####################
+
+  (p21 ph8):N
+  (p13:spf13 pl11 ph9):N (p13 pl19 ph10):H
+  0.5u pl3:N pl4:C     ; GARP power on 15N
+  1u  cpds3:N cpds4:C
+
+  go=Start ph31
+  1m do:N do:C  
+
+  30m mc #0 to Start
+  	F1PH(rp7 & ip3 & rd0 & rd30, id10 & dd29)
+		F2PH(ip7, id0 & dd30)
+
+HaltAcqu, 1m
+
+  30m H2_LOCK
+  30m LOCKH_OFF
+  30m LOCKDEC_OFF
+
+exit
+
+;#####################
+;#  Phase Cycle, n>4 #
+;#####################
+
+
+ph20= 0; sat
+ph21= 1; sat2
+ph22= 2
+
+;2 softpulse (opt) phase cycle saves the 3-4 steps for the 2nd soft pulse
+;moves H90 to 5-8 and NC to 9-16
+#ifdef opt
+ph0= 		1 1				  		;H HY
+ph1= 		0 0 0 0 2 2 2 2 ;H90
+ph2= 		0 0 				  	 ;Y HY
+ph3= 		3 3						;Y901
+ph4= 		1 1						;Y902
+ph13= 	0 1						;Y180 (soft)
+ph14=		0 						;Y180 (hard)
+ph15=		0 0						;DREAM
+ph16=   0 1					    ; CA soft 2 (moved the "soft" pulse cycling here)
+ph17=   0 0 					; CO soft 2 
+ph18=   0 0 				; Y90 3
+ph19=   0 0	; Y180 2 (hard) 
+ph23= 	0 0 1 1 			;Y1802 (soft)
+ph24=		0  						;Y1802 (hard)
+ph5=		0 0 0 0 0 0 0 0 2 2 2 2 2 2 2 2	;Y YX 
+ph6= 		0 0 						;X YX
+ph7= 		1 1						;X901
+ph8= 		1 1 						;X902
+ph9= 		0 0						;X XH
+ph10=		1 1 2 2				;H XH
+ph31 = 	1 3 0 2 3 1 2 0 3 1 2 0 1 3 0 2; Rec
+#else
+ph0= 1 1				  ;H HY
+ph1= 0 0 2 2 			;H90
+ph2= 0 0 				  ;Y HY
+ph3= 3 3					;Y901
+ph4= 1 1					;Y902
+ph13= 0 			;CA soft 1
+ph14= 0 			;Y180 1 (hard)
+ph15=0 0					; CO soft 1
+ph16=0 1					; CA soft 2 (moved the "soft" pulse cycling here)
+ph17=0 0 					; CO soft 2 
+ph18= 0 0 				; Y90 3
+ph19= {0}*8 {1}*8	; Y180 2 (hard) 
+ph23=  0	;Y1802 (soft)
+ph24=  0  ;Y1802 (hard)
+ph5= 0 0 0 0 2 2 2 2	;Y YX 
+ph6= 0 0 					;X YX
+ph7= 1 1					;X901
+ph8= 1 1 					;X902
+ph9= 0 0					;X XH
+ph10=1 1 2 2			;H XH
+ph31 = 3 1 2 0 1 3 0 2 1 3 0 2 3 1 2 0; Rec
+#endif
+
+;###############################################################
+;PARAMETERS:
+;p1      : C 90 at pl1
+;p2      : C 180 at pl1
+;p3      : H 90 at pl2
+;p4      : H 180 at pl2
+;p5      : H spinlock purge
+;p10     : HC CP H pl20 C pl10
+;p13     : NH CP H pl19 N pl11
+;p16     : CN CP H pl13 C pl6 N pl7
+;p18	 : 1H presat pl18
+;p20     : Dream duration
+;p21     : N 90 pl21
+;p22     : N 180 pl21
+;sp23    : Dream pwr
+;d0      : initial t1 (3u)
+;d1      : recycle delay
+;d2      : total t1 ev time
+;NS      : 2 * n
+;DS      : >= 4
+;pl1     : C 90/180 pwr level
+;pl10	 : C HC cp pwr level
+;pl16    : C CN cp pwr level
+;pl4	 : C dec pwr level (not usually used)
+;pl2     : H 90/180 pwr level
+;pl13	 : H CN and DREAM dec pwr level
+;pl17    : N CN cp pwr level
+;pl18    : H presat pwr level
+;pl19    : H NH cp pwr level
+;pl20    : H HC cp pwr level
+;pl21    : N 90/180 pwr level
+;pl23    : C DREAM pl
+;pl11    : N NH cp pwr level
+;cpds3   : N dec cpdsprg3
+;cpds4   : C dec cpdsprg4
+;cnst10  : Freq for C after dream (Hz)
+;cnst29  : expected td1 for use in constant Duty
+;cnst30  : expected td2 for use in constant Duty
+;cnst31  : MAS Rate
+;zgoptns : (-D) Pre, PP, opt

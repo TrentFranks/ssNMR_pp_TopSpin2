@@ -1,0 +1,18 @@
+;T1rho_prot.incl
+
+; List of Protections for T1rho relaxation
+
+;$COMMENT=t2 Protections
+;$CLASS=Solids INCL
+;$OWNER=nmrsu
+
+;###################
+;# Protections for #
+;#  t2 evolution   #
+;###################
+
+if "p17<25m" goto Passp17chk
+  1m 
+  print "T1rho spinlock became too large"
+  goto HaltAcqu
+Passp17chk, 1m

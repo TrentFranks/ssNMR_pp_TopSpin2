@@ -1,0 +1,175 @@
+;invcpCACONHJdec.crmn
+
+;basic cp experiment
+;written by HF 1.3.2001
+;changed by JOS 05/06/03
+;comments added by STE 4.4.2006
+
+;Avance II+ version
+;parameters: 
+;p1 : 13C 90 pulse for 180 in t1
+;pl3 : 13C power for 180
+;p3 : proton 90 at power level pl12
+;p15 : contact time at pl1 (f1) and pl2 (f2)
+;pl1 : X power level during contact
+;sp0 : proton power level during contact
+;pl2 : =120dB, not used
+;pl12 : decoupling power level (if not pl13)
+;pl13 : special decoupliong power level
+;d1 : recycle delay
+;cnst21 : on resonance, usually = 0
+;pcpd2 : pulse length in decoupling sequence
+;pcpd4 : pulse length for X dec during acq
+;cpdprg2 : cw, tppm (at pl12), or lgs, cwlg. cwlgs (LG-decoupling 
+;spnam0 : use e.g. ramp.100 for variable amplitude CP
+;here pl13 is used instead of pl12)
+;zgoptns : -Dfslg, -Dlacq, or blank
+
+;$COMMENT=Inverse Cp with INEPT CBCA mixing
+;$CLASS=Solids
+;$DIM=3D
+;$TYPE=H detect
+;$SUBTYPE=Heteronuclear
+;$OWNER=CRMN
+prosol relations=<solids_cp>
+
+#include <Avancesolids.incl>
+
+;cnst20 : RF field achieved at pl13
+;cnst21 : on resonance, usually = 0
+;cnst22 : positive LG offset
+;cnst23 : negative LG offset
+;cnst24 : additional LG-offset
+;cnst11 : to adjust t=0 for acquisition, if digmod = baseopt
+"acqt0=1u*cnst11"
+"in0=inf1"
+"in30=inf1"
+"in10=inf2/2"
+;aqseq 312
+aqseq 321
+
+1 ze
+
+2 d1 do:f2 do:f3
+#include <p15_prot.incl>	
+#include <aq_prot.incl>	
+
+  (p1 pl1 ph1):f1 
+
+;##########################
+;# HCO CP CO exits as COX #
+;##########################
+
+  (p15:sp28 ph2):f3 (p15:sp1 ph0):f1
+
+;#########################
+;#    CO-CA INEPT Xfer   #
+;# CO to COXcos + CAYsin #
+;#  CO evolves into CAZ  #
+;#########################
+
+  d28 cpds1:f1
+  (p3*2 pl11 ph3):f3 
+  ;(p18:sp18 ph3):f3   ;C aliphatic selective Pi
+  d28 
+
+;####################
+;# Put CAZ into CAY #
+;#  Save part of CO #
+;####################
+
+  ;(p17:sp17 ph4):f3  ;C aliphatic selective 90
+  (p3 pl11 ph4):f3 
+
+;# Time Evolution
+
+  1u  cpds2:f2
+  d10
+  (p18:sp18 ph20):f3  ;CO selective Pi
+  d10
+
+;# Keep the phases pure
+  1u
+  (p19:sp19 ph20):f3   ;CA selective Pi
+  1u
+  (p18:sp18 ph20):f3  ;CO selective Pi
+  
+1u  do:f2
+
+;#################
+;# Put them back #
+;#################
+
+  ;(p17:sp21 ph5):f3  ;C ali transverse selective 90
+  (p3 pl11 ph5):f3    ;C ali transverse selective 90
+
+  d28
+  (p3*2 pl11 ph20):f3 
+;  (p18:sp18 ph20):f3   ;C aliphatic selective Pi
+  d28 
+
+;#########
+;# CN CP #
+;#########
+
+  1u do:f1
+;  (p3 pl11 ph6):f3
+;  d8
+;  (p3 pl11 ph6):f3
+;  1u
+  (p16:sp8 ph7):f3 (p16:sp2 ph8):f2
+
+  1u cpds1:f1 cpds3:f3
+  d0
+  1u do:f1 do:f3
+  (p7 pl7 ph9):f2 
+
+;###########################
+;# MISSISSIPPI suppression #
+;###########################
+ 1u cpds4:f1
+  d30*0.25
+ 1u do:f1
+ 1u cpds5:f1
+  d30*0.25
+ 1u do:f1
+ 1u cpds4:f1
+  d30*0.25
+ 1u do:f1
+ 1u cpds5:f1
+  d30*0.25
+ 1u do:f1
+
+  (p7 pl7 ph10):f2
+  1u
+  (p17 pl20 ph11):f2 (p17:sp10 ph12):f1
+
+  1u cpds2:f2 cpds3:f3
+  go=2 ph31  
+  1m do:f2	 do:f3
+
+
+  10m mc #0 to 2
+  	F1PH( ip3 & rd0 & rd30 & rp7, id10 & dd29)
+		F2PH( ip7, id0 & dd30)
+
+HaltAcqu, 1m  	;jump address for protection files
+exit						;quit
+
+ph0 = 0
+ph1 = 1 3
+ph2 = 1 1 3 3
+ph3 = 0            ;1st aliphatic 180 CA-CB
+ph4 = 1            ;just before t1
+ph5 = 1            ;after t1
+ph6 = 0            ;before CN xfer
+ph7 = {1}*4 {3}*4  ;CN CP (C)
+ph8 = {0}*8 {2}*8  ;CN CP (N)
+ph9 = 3            ;N 90 before MS
+ph10= 1            ;N 90 after MS
+ph11= 0            ;NH CP (N)
+ph12= 0            ;NH CP (H)
+ph20= 0
+
+ph31= 0 2 2 0   2 0 0 2 
+      2 0 0 2   0 2 2 0

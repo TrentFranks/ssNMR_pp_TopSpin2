@@ -1,0 +1,111 @@
+; Transverse PDSD SQ-SQ subroutine 
+; adapted by W. Trent Franks Feb. 2012
+; FMP Berlin
+
+; Contents:
+;   A.E. Bennett, J.H. OK, S.. Vega, R.G. Griffin
+;      Journ. Chem. Phys. 96 8624
+
+
+;#############################
+;#  INCLUDE THESE PARAMETERS #
+;#############################
+;d8     : NOE mixing time
+;
+;#########################
+;#  INCLUDE THESE PHASES #
+;#########################
+;
+;RFDR (xy8)
+;ph23= 0 1 0 1 1 0 1 0
+;ph24= 1 2 1 2 2 1 2 1 
+;
+;#############################
+;#  INCLUDE THESE PARAMETERS #
+;#############################
+;
+;l1   	: rotor periods for RFDR (x4; x8 for full compensation)  ;
+;cnst31 : MAS Frequency 
+;
+;#################
+;#  Calculations #
+;#################
+
+define delay dRFDR_Hp180
+define delay dRFDR_Hcmpd
+define delay RFDRmix
+    "dRFDR_Hp180=(0.5s/cnst31)-(p4/2)"
+    "dRFDR_Hcmpd=(0.5s/cnst31)-(p4/2)-(p2)"
+    "RFDRmix=(1s/cnst31)*l1"      		;RFDR mixing time
+
+subroutine HRFDR_()
+{
+  2u pl2:H
+  TauRm2
+if (l1 >= 1)
+{
+RFDR,
+    dRFDR_Hp180
+    (p4 ph23^):H 
+    dRFDR_Hp180
+lo to RFDR times l1   ;RFDR rotor periods
+}
+  d8				
+  TauRm2
+  2u
+}
+
+subroutine HRFDRs23_(phase pha1)
+{
+  2u
+  TauRm4
+  2u pl2:H
+if (l1 >= 1)
+{
+RFDR,
+    dRFDR_Hp180
+    (p4 ph23^):H 
+    dRFDR_Hp180
+lo to RFDR times l1   ;RFDR rotor periods
+}
+  d8
+  TauRm2
+  (p23:spf23 pl23 pha1):H
+  2u pl2:H
+}
+
+subroutine HRFDR_cmpd()
+{
+  2u pl2:H
+  TauRm2
+if (l1 >= 1)
+{
+RFDR,
+    dRFDR_Hcmpd
+    (p3 ph23 p4 ph24^ p3 ph23^):H 
+    dRFDR_Hcmpd
+lo to RFDR times l1   ;RFDR rotor periods
+}
+  d8				
+  TauRm2
+  2u
+}
+
+subroutine HRFDRs24_(phase pha1)
+{
+  2u
+  (p24:spf24 pl24 pha1):H
+  TauRm4
+  2u pl2:H
+if (l1 >= 1)
+{
+RFDR,
+    dRFDR_Hp180
+    (p4 ph23^):H 
+    dRFDR_Hp180
+lo to RFDR times l1   ;RFDR rotor periods
+}
+  d8				
+  TauRm2
+  2u
+}

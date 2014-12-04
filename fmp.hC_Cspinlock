@@ -1,0 +1,95 @@
+;hX_Xspinlock
+
+;##############################################################
+;#                                                            #
+;#         Spinlock -X (13C) to find R3 or T1_rho             #
+;#                                                            #
+;#   U-13C labeled systems: 1st minimum is 1/2*wr, 2nd min    #
+;#  is 1*wr; 3rd min is 2*wr (incresing pwr); non-uniformly   #
+;#  labeled samples have no 1/2*wr minimum (HORROR condition) #
+;#                                                            #
+;##############################################################
+
+;Cross Polarization with additional spinlock for X channel (13C)
+;R3 & T1_rho Measurement
+;written by WTF
+;Avance II+ version
+
+;$COMMENT= H-X CP with X spinlock
+;$CLASS=Solids
+;$DIM=1D
+;$TYPE=CPMAS
+;$SUBTYPE=Setup
+;$OWNER=Guest
+;prosol relations=<solids_cp>
+
+define delay ONTIME
+;#include <Avancesolids.incl>
+#include <C_detect_def.incl>
+
+;cnst11 : to adjust t=0 for acquisition, if digmod = baseopt
+"acqt0=1u*cnst11"
+                            ;##########################
+;$EXTERN                    ;# Python insertion point #
+                            ;##########################
+Prepare, ze
+
+;######################################################
+;#               Protections: Pre-Check               #
+;######################################################
+
+"ONTIME=aq+p10+p16"
+
+#include <Standard_Prot.incl>
+        ;acquisition, CP time, PDSD/DARR, and echo restrictions
+#include <ONTIME_prot.incl>
+        ;total RF depsosition restriction
+
+;######################################################
+;#           Start of Active Pulse Program            #
+;######################################################
+
+Start, d1 do:H
+ 
+
+                         (p3  pl2  ph1):H
+  (p10:spf0 pl10 ph2):C  (p10 pl20 ph0):H 
+  (p16      pl6  ph3):C  (p16 pl13 ph1):H
+  0.3u cpds2:H ;decouple 1H during acquisition
+
+;#######################################################
+;#                     Acquisition                     #
+;#######################################################
+
+  go=Start ph31         
+  1m do:H
+  d1 mc #0 to Start F0(zd)
+  
+HaltAcqu, 1m
+exit
+
+ph0 = 0                ; H CP Spin lock
+ph1 = 1 3              ; H Hard Pulse
+ph2 = 0 0 2 2          ; X CP Spin Lock 
+ph3 = {0}*4 {2}*4      ; X Spin Lock
+ph31= 2 0 0 2 0 2 2 0  ; receiver
+
+
+;############################################
+;PARAMETERS:
+;p3      : H 90  (pl2)
+;p10     : H-C CP at pl10 (C) and sp0 (H)
+;p16     : SPIN LOCK duration after CP 
+;pl2     : H HP pwr level
+;pl6     : C Spin Lock pwr -Dspinlock
+;sp0     : H CP pwr
+;pl10    : X CP pwr
+;pl12    : H dec pwr
+;pl13    : H alt dec pwr (Spinlock and CW)
+;d1      : recycle delay
+;d2      : H Inversion Recovery Time
+;d6      : Echo delay -Decho 
+;pcpd2   : pulse length in decoupling sequence
+;cpdprg2 : cw, tppm (at pl12), or lgs, cwlg. cwlgs (LG-decoupling 
+;spnam0  : use e.g. ramp.100 for variable amplitude CP
+

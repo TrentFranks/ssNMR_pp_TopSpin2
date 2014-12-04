@@ -1,0 +1,17 @@
+;p10_prot.incl
+
+; Test the rf on-time for HC CP
+; 10ms is maximum
+
+;$COMMENT=Protection against long HC CP time
+;$CLASS=Solids PROT
+;$OWNER=nmrsu
+
+if "p10<10.1m" goto Passp10
+  1m
+  print "HC CP time, p10, exceeds 10msec limit"
+goto HaltAcqu
+Passp10, 1m
+
+
+

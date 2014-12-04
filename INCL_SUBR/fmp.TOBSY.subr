@@ -1,0 +1,148 @@
+; Longitudinal TOBSY subroutines 
+; written by W. Trent Franks Feb. 2010
+; FMP Berlin
+;
+;#########################
+;#  INCLUDE THESE PHASES #
+;#########################
+;C931 TOBSY
+;ph29=(360) 0 40 80 120 160 200 240 280 320
+;ph28=(360) 180 220 260 300 340 380 420 460 500 
+;
+;Adiabatic Pulse Tobsy
+;ph19= (360)  0 240 240  60   0   0 240 240  60   0 
+;           180  60  60 240 180 180  60  60 240 180 
+;
+;#############################
+;#  INCLUDE THESE PARAMETERS #
+;#############################
+;
+;l9   	: TOBSY repeat elements;
+;pl29   : C9 X ampl (3wr)
+;pl19   : R54 adiabatic X ampl (5/8 wr)
+;cnst31 : MAS Frequency 
+;
+;#################
+;#  Calculations #
+;#################
+
+; one C9_3_1 cycle =3*TauR
+; B1C9_3_1 = 6wR
+
+define pulse C931p90       ; 90 pulse for C9_3_1 
+define pulse C931p360      ; 90 pulse for C9_3_1 
+define pulse C931p270      ; 90 pulse for C9_3_1 
+define delay C931mix
+
+"C931p90 =((0.25s/cnst31)/6)"          
+"C931p360=((1.00s/cnst31)/6)"          
+"C931p270=((0.75s/cnst31)/6)"
+"C931mix=C931p360*9*2*l9"
+
+define pulse pC542         ; adiabatic TOBSY pulse
+define delay C542mix
+
+"pC542 =((4.s/cnst31)/5)-5u"
+"C542mix=20*(pC542+5u)*l9"
+
+
+;###################
+;# Building blocks #
+;#    C931 TOBSY   #
+;###################
+
+subroutine C931_TOBSY()
+{
+  1u rpp28
+  1u rpp29
+  (TauRm4 pl16):H 
+  1u pl29:C  pl13:H 
+  1u cpds5:H
+
+if (l9>=0)
+{
+C931,
+  (C931p90  ph29 ):C
+  (C931p360 ph28^):C
+  (C931p270 ph29^):C
+lo to C931 times 9
+lo to C931 times l9
+}
+  2u do:H   
+  (TauRm4 pl16):H
+  2u
+}
+
+subroutine C542adbTOBSY()
+{
+  2u rpp19
+  (TauRm4 pl16):H 
+  1u pl19:C  pl13:H 
+  1u cpds5:H
+
+if(l9>=1)
+{
+C542,
+
+  2.5u
+  (pC542:spf9 ph19^):C
+  2.5u
+lo to C542 times 20
+lo to C542 times l9
+}  
+  2u do:H   
+  (TauRm4 pl16):H
+  2u
+ 
+}  
+
+;###################
+;# Building blocks #
+;#    C961 TOBSY   #
+;###################
+
+subroutine C961_TOBSY()
+{
+  1u rpp28
+  1u rpp29
+  (TauRm4 pl16):H 
+  1u pl29:C  pl13:H 
+  1u cpds5:H
+
+if (l9>0)
+{
+C961,
+  (C961p90  ph29 ):C
+  (C961p360 ph28^):C
+  (C961p270 ph29^):C
+lo to C961 times 9
+lo to C961 times l9
+}
+  2u do:H   
+  (TauRm4 pl16):H
+  2u
+}
+
+subroutine C542adbTOBSY()
+{
+  2u rpp19
+  (TauRm4 pl16):H 
+  1u pl19:C  pl13:H 
+  1u cpds5:H
+
+if(l9>=1)
+{
+C542,
+
+  2.5u
+  (pC542:spf9 ph19^):C
+  2.5u
+lo to C542 times 20
+lo to C542 times l9
+}  
+  2u do:H   
+  (TauRm4 pl16):H
+  2u
+ 
+}  
+

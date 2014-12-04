@@ -1,0 +1,24 @@
+; RFDR_prot.incl
+
+; List of Protections for RFDR
+
+;$COMMENT=SPC5 Protections
+;$CLASS=Solids INCL
+;$OWNER=nmrsu
+
+;###################
+;# Protections for #
+;#      RFDR       #
+;###################
+
+if "l20 < 100" goto Passl20
+  1m
+  print "HC RESPIRATION loop exceeds limit (100)"
+  goto HaltAcqu
+Passl20, 1m
+
+if "HC_RESP_mix<30m" goto PassHCRESP
+  1m
+  print "HC RESPIRATION duration exceeds 10ms limit"
+  goto HaltAcqu
+PassHCRESP, 1m

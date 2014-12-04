@@ -1,0 +1,14 @@
+;TauR_prot.incl
+
+; Test that the MAS rate is set
+; 400 us TauR is allowed (2.5kHz spinning)
+
+;$COMMENT=Protection for MAS not set
+;$CLASS=Solids PROT
+;$OWNER=nmrsu
+
+if "TauR<400.1u" goto PassTauR
+1m 
+print "Spinning frequency (cnst31) not set, or too low"
+goto HaltAcqu
+PassTauR, 1m

@@ -1,0 +1,29 @@
+;Standard_prot.incl
+
+; List of Standard Protection Sequences
+; Test the rf on-time 
+
+;$COMMENT=Standard Protections
+;$CLASS=Solids INCL
+;$OWNER=nmrsu
+
+#include <p8_CHD_prot.incl>
+			;C presat less than 10 msec
+#include <p10_CHD_prot.incl>
+			;HC CP less than 10 msec
+#include <d8_Duty_prot.incl>
+ 			;PDSD/DARR limited to 1 second mixing
+#include <acq_CHD_prot.incl>
+			;Max. 50 msec acquisition time
+#include <TauR_prot.incl>	
+ 			;Spinning is set
+
+; Other Protection files
+;
+; t1 (d30); t2 (d29); t3 (d28)
+; REDOR MIX time  (15ms)
+; RFDR, C7, C5    (10ms)
+; pulse lengths (all less than 50m)
+; cnst31 defined
+; 
+; Must add to each file total on-time

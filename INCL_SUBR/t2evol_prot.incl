@@ -1,0 +1,24 @@
+;t2evol_prot.incl
+
+; List of Protections for t2 evolution
+
+;$COMMENT=t2 Protections
+;$CLASS=Solids INCL
+;$OWNER=nmrsu
+
+;###################
+;# Protections for #
+;#  t2 evolution   #
+;###################
+
+if "d29<25m" goto Passd29chk
+  1m 
+  print "final t2 (d29) became too large"
+  goto HaltAcqu
+Passd29chk, 1m
+
+if "d10<25m" goto Passd10chk
+  1m
+  print "t2 (d10) became too large"
+  goto HaltAcqu
+Passd10chk, 1m

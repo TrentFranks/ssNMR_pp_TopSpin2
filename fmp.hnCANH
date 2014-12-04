@@ -1,0 +1,232 @@
+;HNCA Proton-Detect experiment (TopSpin 2.3)
+
+;######################################################
+;#                                                    #
+;#  HNCA for solids                                   #
+;#    S. Grzesiek & A. Bax, J. Magn. Reson.           #
+;#        96, 432 - 440 (1992)                        #
+;#    J. Schleucher, M. Sattler & C. Griesinger,      #
+;#        Angew. Chem. Int. Ed. 32, 1489-1491 (1993)  #
+;#    L.E. Kay, G.Y. Xu & T. Yamazaki,                #
+;#        J. Magn. Reson. A109, 129-133 (1994)        #
+;#                                                    #
+;#  ns = n*4. 32 is full cycle                        #
+;#                                                    #
+;#  Indirect Dimension phasing is 0,0                 #
+;#                                                    #
+;######################################################
+;
+;$COMMENT= HNCA INEPT Transfer Experiment
+;$CLASS=Solids
+;$DIM=3D
+;$TYPE= 1H detect Hetero
+;$SUBTYPE=Scalar Transfer
+;$OWNER=guest
+;
+;3D sequence with
+;   inverse correlation for triple resonance using multiple
+;      inept transfer steps
+;
+;      F1(H) -> F3(N) -> F2(C=O,t1) -> F3(N,t2) -> F1(H,t3)
+;
+;on/off resonance Ca and C=O pulses using shaped pulse
+;phase sensitive (t1)
+;phase sensitive (t2)
+;using constant time in t2
+;
+;prosol relations=<triple>
+
+;#include <Avance.incl>
+#include <HCN_defs.incl>
+#include <Delay.incl>
+
+;######################################################
+;#          Define Scalar Mixing Parameters           #
+;######################################################
+
+define delay TauHN
+"TauHN=d26"
+define delay GammaHN
+"GammaHN=d21"
+define delay TauNCA
+"TauNCA=d23"
+
+"DELTA=6u+larger(p14,p22)-p14"
+"DELTA1=d23-d21-p26"
+"DELTA2=d26-12u"
+
+"d11=30m"
+"d13=4u"
+
+;cnst11 : adjust t=0 for acq, if digmod = baseoptC Z-mixing
+"acqt0=1u*cnst11"
+
+;######################################################
+;#                Evolution Parameters                #
+;######################################################
+
+aqseq 321
+
+"in0=inf1/2"                ;##########################
+"d0=3u"                     ;#     t1_init => 0,0     #
+"d10=d23/2-p14/2"           ;#     t2_init HNCA=> 0,0 #
+"d29=d23/2-p14/2-d21-4u"    ;#        CT calcs        #
+"d30=d23/2-p14/2"           ;#        CT calcs        #
+"in10=inf2/4"               ;#      t2 increment      #
+"in29=in10"                 ;#                        #
+"in30=in10"                 ;##########################
+
+                            ;##########################
+;$EXTERN                    ;# python insertion point #
+                            ;##########################
+
+Prepare, d11 ze
+
+;######################################################
+;#           Start of Active Pulse Program            #
+;######################################################
+
+Start, d1 do:N
+
+;######################
+;#      PRESAT        #
+;######################
+
+#ifdef Pre
+  3u pl18:H
+  d18 cw:H ph29
+  d13 do:H
+#endif
+
+;#####################
+;#     HN INEPT      #
+;#####################
+
+  (p3 pl2 ph1):H
+  TauHN
+  (center (p4 pl2 ph1):H (p22 pl21 ph1):N )
+  TauHN
+
+;#############
+;# 1H Purge  #
+;#############
+
+#ifdef PP
+  (p5 ph1):H
+#endif
+
+  (lalign (p3 pl2 ph2):H (p21 pl21 ph3):N )
+
+;#####################
+;#    NCA INEPT      #
+;#####################
+                            ;#########################
+  GammaHN pl13:H            ;# Get HzNz before decpl #
+                            ;#########################
+
+  (p26 ph2):H
+  DELTA1 cpds1:H ph1
+  (center (p8:spf8 pl28 ph1):C (p22 ph1):N ) ;CA SP
+  d23
+  (p21 pl21 ph1):N
+
+;#####################
+;#      CA Evol      #
+;#####################
+
+  (p6:spf6 pl26 ph4):C                        ;# Excite CA
+  d0
+  (center (p9:spf9 pl29 ph1):C (p22 ph8):N )   ;# Decouple N+CO
+  d0
+  (p6:spf6 pl26 ph1):C                       ;# Store CA
+  DELTA
+  (p9:spf9 pl29 ph1):C
+  4u
+  (p6:spf6 pl26 ph1):C
+
+;#####################
+;#      N Evol       #
+;#####################
+
+  (p21 ph5):N
+  d30
+  (p9:spf9 pl29 ph1):C
+  d30
+  (center (p8:spf8 pl28 ph1):C (p22 pl21 ph8):N)
+  d10
+  (p9:spf9 pl29 ph1):C
+  d29
+  4u do:H
+  (p26 ph7):H
+  GammaHN
+
+;#####################
+;#     HN INEPT      #
+;#####################
+
+  ( lalign (p3 pl2 ph1):H (p21 pl21 ph1):N)
+  d26
+  (center (p4 pl2 ph1):H (p22 ph1):N )
+  d26 pl16:N
+
+  go=Start ph31 cpd3:f3
+  30m do:N mc #0 to Start
+     F1PH(rd10 & rd29 & rd30 & ip4, id0)
+     F2PH(ip5, id10 & id29 & dd30)
+exit
+
+
+ph1=0;
+ph2=1 
+ph3=0 0 0 0 0 0 0 0 2 2 2 2 2 2 2 2
+ph4=0 2
+ph5=1 1 3 3
+ph6=2
+ph7=3
+ph8=0 0 0 0 2 2 2 2
+ph29=0
+ph31=0 2 2 0 0 2 2 0 2 0 0 2 2 0 0 2
+
+;######################################################################
+
+;PARAMETERS:
+;p1      : C 90 at pl1
+;p2      : C 180 at pl1
+;p3      : H 90 at pl2
+;p4      : H 180 at pl2
+;p6      : CA soft90 pl26
+;p7      : CO soft90 pl27
+;p8      : CA soft180 pl28
+;p9      : CO soft180 pl29
+;p21     : N 90 pl21
+;p22     : N 180 pl21
+;p26     : H 90 at pl19
+;d0      : initial t1
+;d1      : recycle delay
+;d10     : initial t2 = d23/2-p14/2
+;d21     : HN GAMMA time (1/2J ~ 5.5ms)
+;d23     : NCA INEPT time (1/4J ~ 12ms)
+;d26     : HN INEPT time (1/4J ~ 2.3ms)
+;d29     : initial t2 decrement = d23/2-p14/2-p26-d21-4u
+;NS      : 8 * n
+;DS      : >= 16
+;spnam6  : CA soft90 pl26
+;spnam7  : CO soft90 pl27O
+;spnam8  : CA soft180 pl28
+;spnam9  : CO soft180 pl29
+;spoffs6 : CA soft90 pl26
+;spoffs7 : CO soft90 pl27
+;spoffs8 : CA soft180 pl28
+;spoffs9 : CO soft180 pl29
+;pl1     : C HP pwr level
+;pl2     : H HP pwr level
+;pl12    : H dec pwr
+;pl13    : H alt dec pwr (Spinlock and CW)
+;pl26    : CA s90 pwr level
+;pl27    : CO s90 pwr level
+;pl28    : CA s180 pwr level
+;pl29    : CO s180 pwr level
+;cpds1   : H dec cpdprg1
+;cpds3   : N dec cpdprg3
+;pcpd1   : H 180 for dec
+;pcpd3   : N 180 for dec

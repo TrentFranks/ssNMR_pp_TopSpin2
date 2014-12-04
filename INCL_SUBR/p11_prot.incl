@@ -1,0 +1,17 @@
+;p11_prot.incl
+
+; Test the rf on-time for H-N CP 
+; 10ms is maximum
+
+;$COMMENT=Protection against long HN CP time
+;$CLASS=Solids PROT
+;$OWNER=nmrsu
+
+if "p11<10.1m" goto Passp11
+  1m
+  print "HN CP time p11 exceeds 10msec limit!"
+  goto HaltAcqu
+Passp11, 1m
+
+
+

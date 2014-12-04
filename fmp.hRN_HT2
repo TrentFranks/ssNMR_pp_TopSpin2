@@ -1,0 +1,97 @@
+;hN
+
+;#####################################################
+;# HT2                                               #
+;# -Proton Simple Spin Echo *T2* is ~0.6*Signal(t0)  #
+;#   Use appropriate vdlist with Topspin Analysis    #
+;# Analysis -> T1/T2 Relaxation Analysis -> uxnmrt2  #
+;#####################################################
+
+;Cross Polarization for Y channel (15N)
+;written by WTF
+;Avance II+ version
+
+;$COMMENT= H-Y CP with 1H T2 echo
+;$CLASS=Solids
+;$DIM=2D
+;$TYPE=CPMAS
+;$SUBTYPE=Relaxation
+;$OWNER=Guest
+;prosol relations=<solids_cp>
+
+;#include <Avancesolids.incl>
+#include <N_detect_def.incl>
+
+;cnst11 : to adjust t=0 for acquisition, if digmod = baseopt
+"acqt0=1u*cnst11"
+
+                            ;##########################
+;$EXTERN                    ;# Python insertion point #
+                            ;##########################
+
+Prepare, ze
+
+;######################################################
+;#               Protections: Pre-Check               #
+;######################################################
+
+#include <Standard_Prot.incl>
+        ;acq, CP time, etc.
+
+;######################################################
+;#           Start of Active Pulse Program            #
+;######################################################
+
+Start, d1 do:H 
+
+
+                         (p3  pl2 ph0):H 
+  vd
+                         (p4  pl2 ph1):H 
+  vd
+  (p11:spf1 pl11 ph3):N  (p11 pl19 ph2):H  
+
+  0.3u cpds2:H  ;decouple 1H during acquisition
+
+;###############
+;# Acquisition #
+;###############
+
+  go=Start ph31         
+  1m do:H 
+  30m mc #0 to Start F1QF(ivd) 
+  
+HaltAcqu, 1m
+exit
+
+ph0 = 3 1              ; H90
+ph1 = 0                ; H180
+ph2 = 0                ; H-CP
+ph3 = 0 0 2 2 1 1 3 3  ; Y-CP
+
+ph31= 0 2 2 0 1 3 3 1  ; receiver
+
+;#########################################################################
+
+;PARAMETERS: 
+;p3      : H 90 at pl2
+;p4      : H 180 at pl2
+;p11     : H-N CP contact pl11 (f1) and sp1 (f2)
+;p16     : SPIN LOCK duration after CP 
+;p21     : N 90 (pl21) use -Dp90  
+;p22     : N 180 (pl21) use -Decho
+;sp1     : H CP pwr
+;pl2     : H HP pwr
+;pl7     : N Spin Lock pwr -Dspinlock
+;pl11    : N CP pwr 
+;pl12    : H dec pwr
+;pl13    : H alt dec pwr (Spinlock and CW)
+;pl21    : N HP pwr
+;d1      : recycle delay
+;d2      : H Inversion Recovery Time
+;d6      : Echo delay -Decho
+;pcpd2   : pulse length in decoupling sequence
+;cpdprg2 : cw, tppm (at pl12), or lgs, cwlg. cwlgs (LG-decoupling 
+;spnam1  : use e.g. ramp.100 for variable amplitude CP
+;zgoptns : (-D) None
+

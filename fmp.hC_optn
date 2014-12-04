@@ -1,0 +1,232 @@
+;hC
+
+;Cross Polarization for X channel (13C)
+;Options for Direct Pol, DPCP, X90, Hahn echo, and Spin Lock periods 
+;written by WTF
+;Avance II+ version
+
+;######################################################
+;#                                                    #
+;# H-C Cross Polarization Experiment                  #
+;#                                                    #
+;#  Adjust pl10, pl20, and p10 for maximum signal.    #
+;#  The Hartman-Hahn CP condidition is B1(H)=B1(C)+-1 #
+;#  sp0 is usually a linear or tangent ramp           #
+;#  p10 is usually 1 ms                               #
+;#                                                    #
+;# Additional Options for Direct Excitation, X-Pinging#
+;#   H and C Inversion-Recover, H and C spin echo     #
+;#   and Spin-Lock periods discussed below            # 
+;#                                                    #
+;######################################################
+
+;$COMMENT= H-X CP with all options
+;$CLASS=Solids
+;$DIM=1D
+;$TYPE=CPMAS
+;$SUBTYPE=Setup
+;$OWNER=Guest
+
+;prosol relations=<solids_cp>
+
+#include <Avancesolids.incl>
+#include <C_detect_def.incl>
+
+define delay ONTIME
+;cnst11 : to adjust t=0 for acquisition, if digmod = baseopt
+"acqt0=1u*cnst11"
+                            ;##########################
+;$EXTERN                    ;# Python insertion point #
+                            ;##########################
+Prepare, ze
+
+;######################################################
+;#               Protections: Pre-Check               #
+;######################################################
+
+"ONTIME=aq+p10"  ; options not included for clarity 
+
+#include <Standard_Prot.incl>
+        ;acq, CP time, etc.
+#include <ONTIME_prot.incl>
+        ;total RF depsosition restriction
+
+;######################################################
+;#           Start of Active Pulse Program            #
+;######################################################
+
+Start, d1 do:H
+
+1m do:H
+
+;######################################################
+;# Hir -Proton Inversion Recovery, 0-Cross is ~0.6*T1 #
+;#   fmp.hRX_HT1 or fmp.hRX_T1T2 (with -DHT1) for 2D  #
+;######################################################
+
+#ifdef Hir
+                    (p4 pl2 ph0):H 
+  d2
+#endif
+
+;######################################################
+;#        DP -Direct Polarization to Carbons          #
+;######################################################
+
+#ifdef DP
+  (p1 pl1 ph10):C
+#endif
+
+;######################################################
+;#    DPCP -Direct Exc and Cross Polarization on C    #
+;######################################################
+
+#ifdef DPCP
+  (ralign (p1 pl1 ph10):C (p3  pl2 ph1):H  )
+  (p10:spf0 pl10 ph2):C  (p10 pl20 ph0):H 
+#endif
+
+;######################################################
+;#   Hecho- Simple Spin Echo-*T2* is ~0.6*Signal(t0)  #
+;#  fmp.hRX_HT2 or fmp.hRX_T1T2 (with -DHT2) for 2D   #
+;######################################################
+
+#ifdef Hecho
+                         (p3  pl2 ph11):H
+                         (d6)
+                         (p4  pl2 ph0):H 
+                         (d6)
+  (p10:spf0 pl10 ph2):C  (p10 pl20 ph0):H 
+#endif
+
+;#######################################################
+;#                   Default Usage                     #
+;#######################################################
+
+#ifndef DPCP
+#ifndef DP
+#ifndef Hecho
+                         (p3  pl2 ph1):H
+  (p10:spf0 pl10 ph2):C  (p10 pl20 ph0):H 
+
+#endif
+#endif
+#endif
+
+  0.3u cpds2:H  ;decouple 1H during acquisition
+
+;#######################################################
+;#      p90 -X (13C) Spin Ping *p1* is Zero Cross      #
+;#######################################################
+
+#ifdef p90
+  (p1  pl1  ph3):C
+#endif
+
+;#######################################################
+;#   echo -X (13C) Spin Echo *T2* is ~0.6*Signal(t0)   #
+;#    Does ~NOT~ compensate for Jcoupling evolution    #
+;#   fmp.hRX_XT2 or fmp.hRX_T1T2 (with -DCT2) for 2D   #
+;#######################################################
+
+#ifdef echo
+  d6               
+  (p2  pl1  ph20):C
+  d6
+#endif
+
+;#######################################################
+;# echoSP -X (C) Soft Spin Echo *T2* is ~0.6*Sig(t0)   #
+;# ~DOES~ compensate for J-coupling evolution if set   #
+;# fmp.hRX_XT2 or fmp.hRX_T1T2 (with -DCT2SP) for 2D   #
+;#######################################################
+
+#ifdef echoSP
+  d6               
+  (p8:spf8 pl28 ph20):C
+  d6
+#endif
+
+;#######################################################
+;#      Spinlock -X (13C) to find R3 conditions        #
+;#                                                     #
+;#  U-13C labeled systems: 1st min.is 1/2*wr, 2nd      #
+;#  is 1*wr; 3rd min is 2*wr (increasing pwr);         #
+;#   nonuniformly-labeled samples have no 1/2*wr min   #
+;#              (HORROR condition)                     #
+;#######################################################
+
+#ifdef spinlock 
+  0.3u         ;DO NOT REMOVE!!!!
+  0.3u do:H
+  (p16 pl6 ph2):C  (p16 pl13 ph1):H
+  0.3u cpds2:H 
+#endif
+
+;#######################################################
+;#                     Acquisition                     #
+;#######################################################
+
+  go=Start ph31         
+  1m do:H
+  30m mc #0 to Start F0(zd)
+  
+HaltAcqu, 1m
+exit
+
+ph0 = 0                ; H CP Spin lock
+ph1 = 1 3              ; H Hard Pulse
+ph2 = 0 0 2 2 1 1 3 3  ; X CP Spin Lock 
+ph3 = 1 1 3 3 2 2 0 0  ; X90
+ph10= 1 3 3 1 2 0 0 2  ; X90 DP
+ph11= 3 1              ; H90 Inversion
+
+ph20= 0 1 2 3 
+
+#ifndef echo
+#ifndef echoSP
+#ifndef echoCW
+  ph31= 0 2 2 0 1 3 3 1  ; receiver
+#endif
+#endif
+#endif
+
+#ifdef echo
+  ph31= 0 0 2 2 3 3 1 1  ; receiver
+#endif
+
+#ifdef echoSP
+  ph31= 0 0 2 2 3 3 1 1 ; receiver
+#endif
+
+#ifdef echoCW
+  ph31= 0 0 2 2 3 3 1 1 ; receiver
+#endif
+
+
+;######################################################
+
+;PARAMETERS:
+;p1      : C 90  (pl1) use -Dp90 
+;p2      : C 180 (pl1) use -Decho
+;p3      : H 90  (pl2)
+;p4      : H 180 (pl2)
+;p8      : C soft 180 (spnam8, pl8) use -DechoSP
+;p10     : H-C CP at pl10 (C) and sp0 (H)
+;p16     : SPIN LOCK duration after CP 
+;pl1     : C HP pwr level
+;pl2     : H HP pwr level
+;pl6     : C Spin Lock pwr -Dspinlock
+;pl8     : C soft 180 
+;sp0     : H CP pwr
+;pl10    : X CP pwr
+;pl12    : H dec pwr
+;pl13    : H alt dec pwr (Spinlock and CW)
+;d1      : recycle delay
+;d2      : H Inversion Recovery Time
+;d6      : Echo delay -Decho 
+;pcpd2   : pulse length in decoupling sequence
+;cpdprg2 : cw, tppm (at pl12), or lgs, cwlg. cwlgs (LG-decoupling 
+;spnam0  : use e.g. ramp.100 for variable amplitude CP
+;spnam8  : soft X 180 e.g. rSnob
+;zgoptns : (-D) DP, DPCP, p90, echo(SP), spinlock, Hir, Hecho

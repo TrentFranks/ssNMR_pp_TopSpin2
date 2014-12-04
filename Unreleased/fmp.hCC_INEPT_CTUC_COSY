@@ -1,0 +1,244 @@
+;HC INEPT excitation with DARR/PDSD experiment (TopSpin 2.3)
+
+;######################################################
+;#                                                    #
+;#  CTUC COSY (CA-CO opt)                             #
+;#  Chen, L.; Olsen, R.; Elliot, D; Boettcher, J;     #
+;#    Zhou, D; Rienstra, C; and Mueller, L.           #
+;#    J Am Chem Soc 2006, 128, 9992-9993.             #
+;#                                                    #
+;#  ns = n*4. 32 is full cycle                        #
+;#                                                    #
+;#  Indirect Dimension phasing is 0,0                 #
+;#                                                    #
+;#  F1(t1) C; F2 (t2) C                               #
+;#                                                    #
+;######################################################
+;
+; written W Trent Franks
+;
+;$COMMENT= HC INEPT with C Cosy (transverse) mixing
+;$CLASS=Solids
+;$DIM=2D
+;$TYPE=Homonuclear
+;$SUBTYPE=ZQ mixing
+;$OWNER=guest
+
+;prosol relations=<solids_cp>
+
+;#include <Avancesolids.incl>
+#include <C_detect_def.incl>
+
+;######################################################
+;#                   Define Mixing                    #
+;#           use Selective 180's w/ option            #
+;######################################################
+
+define delay TauCC
+define delay Delta1
+define delay TauCCmSP
+define delay TauCCmSP2
+define delay Delta1_mSP
+
+"TauCC=d21-p1-p2/2"
+"Delta1=d21-d5-d5"
+"TauCCmSP=d21-p8/2"
+"TauCCmSP2=d21-p8/2-p9"
+"Delta1_mSP=d21-d5-d5-p8/2"
+
+"d30=0.3u"
+
+;cnst11 : adjust t=0 for acq, if digmod = baseopt
+"acqt0=1u*cnst11"
+
+"in0 =inf1/2"               ;##########################
+"in30=inf1/2"               ;#     t1_init => 0,0     #
+"d22 =d21-p8/2-p9"          ;#                        #
+define delay ONTIME         ;##########################
+define loopcounter T1evo    ;# Power Deposition Calcs #
+"T1evo=larger(td1,cnst30)"  ;#   Constant Duty Cycle  #
+                            ;##########################
+#ifdef SP
+  "d0=d21-0.3u-p8/2"
+  "d30=0.3u"
+  "d29=T1evo*in0/2+p8/2"
+#endif
+
+#ifndef SP
+  "d0=d21-0.3u-p2/2"
+  "d30=d21-0.3u-p2/2-p1"
+  "d29=T1evo*in0/2+p2/2+p1"
+  "Delta1=Delta1_mSP"
+#endif
+
+                            ;##########################
+;$EXTERN                    ;# python insertion point #
+                            ;##########################
+
+Prepare, ze
+
+"ONTIME=aq+p8+(4*d21)-Delta1" ;#  DARR left out   #
+
+;######################################################
+;#               Protections: Pre-Check               #
+;######################################################
+
+if "d29<2*d21" goto PassCC
+  1m 
+  print "t2 (d0) became larger than the delay (d21), aborted"
+  goto HaltAcqu
+PassCC, 1m
+
+if "Delta1>10u" goto PassDelta1
+  1m
+  print "Refocussing time Delta1 (d21-2*d5) became too short, aborted"
+  goto HaltAcqu
+PassDelta1, 1m
+
+#include <Standard_Prot.incl>
+        ;acq, CP time, etc.
+#include <ONTIME_prot.incl>
+        ;total RF depsosition restriction
+
+
+Start, d1 do:H
+
+
+#ifdef CPRE
+ ; Carbon Presatuaration
+ (p0 pl0 ph20):C
+#endif
+
+;######################################################
+;#           INEPT Excitation Polarization            #
+;######################################################
+
+
+                         (p3  pl2  ph1):H
+  d4
+
+
+  (center
+    (p1 pl1 ph20 p2 ph21 p1 ph20):C
+    (p3 ph17 p4 ph2 p3 ph17):H
+  )
+
+  d4
+
+  (ralign (p1 ph5):C     (p3 ph4):H )
+
+;########################
+;#    t1 evolution      #
+;########################
+
+#ifndef SP
+  (lalign 
+    (d5 d5 0.5u cpds2):H
+    (d30 p1 pl1 ph18 p2 ph8 p1 ph18 d0):C
+  )
+#endif
+
+#ifdef SP
+  (lalign 
+    (d5 d5 0.5u cpds2):H
+    (d0 p8:spf8 pl28 ph8 d22 p9:spf9 pl29 ph20 d30 ):C
+  )
+#endif
+
+;#########################################
+;#    INEPT gives pure x phase on C      #
+;#########################################
+
+  (p1 pl1 ph9):C              ;##########################
+  10u                         ;#   DQ,ZQ filter step    #
+  (p1 pl1 ph10):C             ;##########################
+
+#ifndef SP
+  TauCC
+  (p1 pl1 ph19 p2 ph11 p1 ph19):C
+  TauCC
+#endif
+
+#ifdef SP
+  TauCCmSP
+  (p8:spf8 pl28 ph11):C
+  TauCCmSP
+#endif
+
+;#######################################################
+;#                     Z-filter                        #
+;#######################################################
+  0.3u do:H
+  (p1 pl1 ph12):C   (p1 pl2):H  ;store
+  0.3u pl16:H
+  d8 
+  0.3u do:H
+  ;subr PDSD_DARR()
+  (p1 pl1 ph13):C   (p1 pl2):H  ;readout
+  0.3u cpds2:H ;decouple 1H during acquisition
+
+
+;#######################################################
+;#                     Acquisition                     #
+;#######################################################
+
+  go=Start ph31
+  1m do:H
+
+d1 mc #0 to Start F1PH(dp5,dd0 & id30 ) 
+
+HaltAcqu, 1m
+exit
+;# HC INEPT 
+ph1 = 0 0 2 2          ; H exc
+ph2 = 0                ; H echo
+ph3 = 0                ; X echo 
+ph4 = 3                ; H store
+ph5 = 0 2              ; C exc HC
+ph6 = 0                ; C echo HC
+ph7 = 0                ; H exc
+ph8=  1 3 3 1 0 2 2 0  ; C echo CC
+ph9=  1 3              ; C ZDQ
+ph10= 1                ; C ZDQ
+ph11= {0}*8 {1}*8  {2}*8 {3}*8   ; C echo
+
+ph12= 3                ; C store (z-filter)
+ph13= 1                ; C exc   (z-filter)
+
+ph17= 3                ; ph2 - 1
+ph18= 0 2 2 0 3 1 1 3  ; ph8 - 1
+ph19= {3}*8 {0}*8  {1}*8 {2}*8   ; ph11 - 1
+
+ph20= 0
+ph21= 1
+
+ph31= 2 2 0 0 0 0 2 2   0 0 2 2 2 2 0 0
+
+;PARAMETERS:
+;p1      : C 90  (pl1)
+;p2      : C 180 (pl1)
+;p3      : H 90  (pl2)
+;p8      : C Presat (-DCpre)
+;p6      : C soft 90  (pl26)
+;p10     : HC CP contact pl10 (C) and sp0 (H)
+;sp0     : H CP pwr
+;pl1     : C HP pwr
+;pl2     : H HP pwr
+;pl10    : C CP pwr
+;pl12    : H dec pwr
+;pl13    : H alt dec pwr (Spinlock and CW)
+;pl16    : H DARR pwr (DARR = MAS freq; PDSD =120)
+;pl26    : C soft 90 pwr
+;d1      : recycle delay
+;d8      : Final Z-filter time
+;d4      : HC 1st INEPT 1/4J (1.7m)
+;d5      : HC 2nd INEPT 1/4J (1.7m)
+;d21     : CC Cosy 1/4J (4.5m)
+;pcpd2   : pulse length in decoupling sequence
+;cpdprg2 : cw, tppm (at pl12), or lgs, cwlg. cwlgs (LG-decoupling 
+;spnam0  : use e.g. ramp.100 for variable amplitude CP
+;spnam6  : C soft 90 purge pulse (e.g. eSNOB)
+;cnst30  : expected td1 for use in constant Duty (-DCDC)
+;cnst31  : MAS Rate
+;FnMode  : TPPI, States or States-TPPI
+;zgoptns : (-D) D1, DP, CDC, Cpre, purge

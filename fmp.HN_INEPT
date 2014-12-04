@@ -1,0 +1,134 @@
+;hC
+
+;Cross Polarization for X channel (13C)
+;written by WTF
+;Avance II+ version
+
+;######################################################
+;#                                                    #
+;# H-N INEPT Transfer Experiment, C detect            #
+;#                                                    #
+;######################################################
+
+;$COMMENT= HC INEPT
+;$CLASS=Solids
+;$DIM=2D
+;$TYPE=Heteronuclear
+;$SUBTYPE=Scalar Xfer
+;$OWNER=guest
+
+;prosol relations=<solids_cp>
+
+;#include <Avancesolids.incl>
+#include <N_detect_def.incl>
+
+;cnst11 : to adjust t=0 for acquisition, if digmod = baseopt
+"acqt0=1u*cnst11"
+
+"in0=inf1"                  ;##########################
+"d0=in0/2-p3*2/3.14159"     ;#   t1_init => 90,-180   #
+"in30=inf1"                 ;#                        #
+define loopcounter go_t1    ;#   No increment if 1D   #
+"go_t1=td1"                 ;##########################
+
+define delay ONTIME         ;##########################
+define loopcounter T1evo    ;# Power Deposition Calcs #
+"T1evo=larger(td1,cnst30)"  ;#   Constant Duty Cycle  #
+"d30=T1evo*in30"            ;##########################
+                             
+                            ;##########################
+;$EXTERN                    ;# python insertion point #
+                            ;##########################
+
+Prepare, ze
+
+;######################################################
+;#               Protections: Pre-Check               #
+;######################################################
+
+"ONTIME=aq+p3+p4+p3+p4"
+
+#include <Standard_Prot.incl>
+        ;acq, CP time, etc.
+#include <ONTIME_prot.incl>
+        ;total RF depsosition restriction
+
+;######################################################
+;#           Start of Active Pulse Program            #
+;######################################################
+
+Start, d1 do:H
+
+                         (p3  pl2  ph1):H
+
+
+;########################
+;#    t1 evolution      #
+;########################
+
+if "go_t1>1"
+{        
+  (center                   
+    (d0):H
+    (p21 pl21 ph20 p22 ph21 p21 ph20):N
+  )      
+}
+  
+  d4
+  (center (p22 pl21 ph3):N (p4 ph2):H )
+  d4
+  (ralign (p21 ph5):N     (p3 ph4):H )
+  d5
+  (center (p22 pl21 ph6):N (p4 ph7):H )
+  d5
+
+  0.3u cpds2:H ;decouple 1H during acquisition
+
+;#######################################################
+;#                     Acquisition                     #
+;#######################################################
+
+gosc ph31 	           	;start ADC with ph31 signal routing
+
+1m do:H 			;decoupler off
+
+#ifdef CDC
+  d30                   ; Constant
+#endif
+
+lo to Start times ns
+
+d1 mc #0 to Start F1PH(ip1,id0 & dd30) 
+
+HaltAcqu, 1m
+exit
+  
+ph1 = 0 2              ; H exc
+ph2 = 0                ; H echo
+ph3 = 0                ; X echo 
+ph4 = 3                ; H store
+ph5 = 0 0 2 2          ; C exc
+ph6 = 0                ; C echo
+ph7 = 0                ; H exc
+
+ph20= 0
+ph21= 1
+
+ph31= 2 0 0 2          ; receiver
+
+;#########################################################################
+
+;PARAMETERS:
+;p21     : N 90 pl21
+;p22     : N 180 pl21
+;p3      : H 90 at pl2
+;p4      : H 180 at pl2
+;pl21    : N HP pwr level
+;pl2     : H HP pwr level
+;pl12    : H dec pwr
+;pl13    : H alt dec pwr (Spinlock and CW)
+;d1      : recycle delay
+;d4      : HN INEPT time (1/4J ~ 1.5ms)
+;d5      : HN INEPT time (1/4J ~ 1.5ms)
+;pcpd2   : pulse length in decoupling sequence
+;cpdprg2 : cw, tppm (at pl12), or lgs, cwlg. cwlgs (LG-decoupling 

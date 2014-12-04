@@ -1,0 +1,61 @@
+; Transverse R2T SQ-SQ subroutine 
+; adapted by W. Trent Franks Feb. 2010
+; FMP Berlin
+
+; Contents:
+;  R2T 
+;  Costa, PR; Sun B; Griffin, RG;
+;     J. Am. Chem. Soc. 1997, 119, 10821-10830.
+;  R2T w/ DARR 
+
+;#############################
+;#  INCLUDE THESE PARAMETERS #
+;#############################
+;p27    : Rotor Period
+;cnst31 : MAS Frequency
+;
+;########################
+;#  INCLUDE THESE FILES #
+;########################
+;
+;#include <TauR_Defs>
+;
+
+define loopcounter DUOcnt
+
+;###################
+;# Protections for #
+;#     POSTC7_2    #
+;###################
+
+if "C72p90<15u" goto PassC72
+  print "POSTC7_2 90 pulse too long, set spinning speed"
+  goto HaltAcqu
+PassC72, 1m
+
+if "l7 < 35" goto Passl7
+  print "C7 loop out of range"
+  goto HaltAcqu
+Passl7, 1m
+
+if "C72mix<5m" goto PassC72
+  print "C7 duration out of range"
+  goto HaltAcqu
+PassC72, 1m
+
+
+subroutine DUO_(phase pha1, phase pha2)
+{
+  (p1 pl1 pha1):C  (p1 pl2):H 	
+
+  (TauR pl16):H   
+
+DUO,
+  (p27:sp27 ph20):C (p25 pl13):H  
+lo to DUO times DUOcnt
+
+  (TauR pl16):H   
+
+  (p1 pl1 pha2):C  (p1 pl2):H 	;flip back
+}
+

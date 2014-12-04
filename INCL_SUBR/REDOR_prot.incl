@@ -1,0 +1,49 @@
+; REDOR_prot.incl
+
+; List of Protections for REDOR/TEDOR
+
+;$COMMENT=REDOR/TEDOR Protections
+;$CLASS=Solids INCL
+;$OWNER=nmrsu
+
+;###################
+;# Protections for #
+;#   REDOR/TEDOR   #
+;###################
+
+if "l4 < 41" goto Passl4
+  1m
+  print "REDOR (l4) exceeds limit (40)"
+  goto HaltAcqu
+Passl4, 1m
+
+if "l14 < 41" goto Passl14
+  1m
+  print "REDOR loop (l14) exceeds limit (40)"
+  goto HaltAcqu
+Passl14, 1m
+
+if "REDORmix<10.1m" goto PassREDOR
+  1m
+  print "REDOR duration greater than 10ms"
+  goto HaltAcqu
+PassREDOR, 1m
+
+if "TEDORmix<20.1m" goto PassTEDOR
+  1m
+  print "TEDOR duration greater than 20ms"
+  goto HaltAcqu
+PassTEDOR, 1m
+
+if "REDORmixtot<10.1m" goto PassREDORtot
+  1m
+  print "REDOR duration greater than 10ms"
+  goto HaltAcqu
+PassREDORtot, 1m
+
+if "TEDORmixtot<20.1m" goto PassTEDORtot
+  1m
+  print "TEDOR duration greater than 20ms"
+  goto HaltAcqu
+PassTEDORtot, 1m
+

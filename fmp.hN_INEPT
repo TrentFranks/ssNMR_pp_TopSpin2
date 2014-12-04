@@ -1,0 +1,103 @@
+;hN
+
+;Cross Polarization for X channel (13C)
+;written by WTF
+;Avance II+ version
+
+;######################################################
+;#                                                    #
+;# H-N INEPT Excitation Experiment                    #
+;#                                                    #
+;#  Adjust d27, d28, decoupling, and Hard pulses      #
+;#                                                    #
+;#  d27, d28 <= 1/(4*90Hz) = 2.7 ms                   #
+;#                                                    #
+;######################################################
+
+;$COMMENT= H-X CP
+;$CLASS=Solids
+;$DIM=1D
+;$TYPE=CPMAS
+;$SUBTYPE=Setup
+;$OWNER=guest
+
+;prosol relations=<solids_cp>
+
+define delay ONTIME
+;#include <Avancesolids.incl>
+#include <N_detect_def.incl>
+
+;cnst11 : to adjust t=0 for acquisition, if digmod = baseopt
+"acqt0=1u*cnst11"
+
+                            ;##########################
+;$EXTERN                    ;# Python insertion point #
+                            ;##########################
+
+Prepare, ze
+
+;######################################################
+;#               Protections: Pre-Check               #
+;######################################################
+
+"ONTIME=aq+p10"
+
+#include <Standard_Prot.incl>
+        ;acq, CP time, etc.
+#include <ONTIME_prot.incl>
+        ;total RF depsosition restriction
+
+;######################################################
+;#           Start of Active Pulse Program            #
+;######################################################
+
+Start, d1 do:H
+
+                         (p3  pl2  ph1):H
+  d26
+  (center (p22 pl21 ph3):N (p4 ph2):H )
+  d26
+  (ralign (p21 ph5):N      (p3 ph4):H )
+  d27
+  (center (p22 pl21 ph6):N (p4 ph7):H )
+  d27
+
+  0.3u cpds2:H ;decouple 1H during acquisition
+
+;#######################################################
+;#                     Acquisition                     #
+;#######################################################
+
+  go=Start ph31
+  1m do:H
+  30m mc #0 to Start F0(zd)
+  
+HaltAcqu, 1m
+exit
+
+ph1 = 0 2              ; H exc
+ph2 = 0                ; H echo
+ph3 = 0                ; X echo 
+ph4 = 3                ; H store
+ph5 = 0 0 2 2          ; C exc
+ph6 = 0                ; C echo
+ph7 = 0                ; H exc
+
+ph31= 2 0 0 2          ; receiver
+
+;#########################################################################
+
+;PARAMETERS:
+;p3      : H 90 at pl2
+;p4      : H 180 at pl2
+;p21     : N 90 pl1
+;p22     : N 180 pl1
+;pl2     : H HP pwr level
+;pl12    : H dec pwr
+;pl13    : H alt dec pwr (Spinlock and CW)
+;pl21    : N HP pwr level
+;d1      : recycle delay
+;d26     : HN (H+Nz) INEPT time (1/4J <= 2.7ms)
+;d27     : HN (HzN+) INEPT time (1/4J <= 2.7ms)
+;pcpd2   : pulse length in decoupling sequence
+;cpdprg2 : cw, tppm (at pl12), or lgs, cwlg. cwlgs (LG-decoupling 

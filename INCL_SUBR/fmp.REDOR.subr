@@ -1,0 +1,153 @@
+; W. Trent Franks Jan. 2011
+; FMP Berlin
+
+;######################################################
+;#                                                    #
+;# REDOR                                              #
+;#  T Gullion and J Schaefer                          #
+;#       J. Magn. Reson. 81, 196-200 (1989)           #
+;#                                                    #
+;######################################################
+
+; Adapted from Bruker
+
+;######################################
+;#  INCLUDE THESE PHASES (15N REDOR)  #
+;######################################
+;#ifdef xy16
+;ph10= 0 1 0 1 1 0 1 0 2 3 2 3 3 2 3 2
+;ph11= 0 1 0 1 1 0 1 0 2 3 2 3 3 2 3 2
+;#else
+;ph10= 0 1 0 1 
+;ph11= 0 1 0 1 
+;#endif
+
+;##########################
+;#  Define REDOR timings  #
+;##########################
+
+define delay Trby2
+define delay Trby4
+define delay Trby2_m_N180
+define delay Trby4_m_N180by2
+define delay Trby4_m_C180by2
+
+"Trby2 = 0.50s/cnst31"             ;Tr/2
+"Trby4 = 0.25s/cnst31"             ;Tr/4
+"Trby2_m_N180 = 0.50s/cnst31-p22"         ;Tr/2 - N180
+"Trby4_m_N180by2= 0.25s/cnst31-(p22/2)"     ;Tr/4 - N180/2
+"Trby4_m_C180by2= 0.25s/cnst31-(p2/2)"	   ;Tr/4 - C180/2
+
+define delay REDORmix
+"REDORmix=(l4+1)*2s/cnst31"
+define delay TEDORmix
+"TEDORmix=(l4+1)*4s/cnst31"
+define delay REDORmixtot
+"REDORmixtot=larger(((l14+1)*2s/cnst31),((l4+1)*2s/cnst31))"
+define delay TEDORmixtot
+"TEDORmixtot=larger(((l14+1)*4s/cnst31),((l4+1)*4s/cnst31))"
+
+; TEDOR Constant Duty Cycle (TedorCDC)
+"l15=larger(l14-l4,0)"
+
+;###########################
+;#                         # 
+;#  Add some  protections  #
+;#                         # 
+;###########################
+
+subroutine REDOR()
+{
+   Trby4 cpds2:H     ;Tr/4;
+
+REDOR1,
+
+   Trby4_m_N180by2
+   (p22 pl21 ph10^):N
+   Trby2_m_N180            ;Ends at (l4+1/4)*Tr
+   (p22 pl21 ph10^):N
+   Trby4_m_N180by2 
+
+lo to REDOR1 times l4
+
+   Trby4_m_C180by2              ;Tr/4 - p2/2
+   Trby2
+   (p2 pl1 ph20):C          ; C 180 centered on (l4+1)*Tr
+   Trby2
+   Trby4_m_C180by2              ;Tr/4 - p2/2
+
+REDOR2,
+
+   Trby4_m_N180by2
+   (p22 pl21 ph10^):N
+   Trby2_m_N180            ;Ends at (2*l4+7/4)*Tr
+   (p22 pl21 ph10^):N
+   Trby4_m_N180by2;
+
+lo to REDOR2 times l4
+
+   Trby4 
+}
+
+subroutine REDOR2()
+{
+   Trby4 cpds2:H           ;Tr/4
+
+REDOR3,
+
+   Trby4_m_N180by2
+   (p22 pl21 ph10^):N
+   Trby2_m_N180            ;Ends at (l4+1/4)*Tr
+   (p22 pl21 ph10^):N
+   Trby4_m_N180by2
+
+lo to REDOR3 times l4
+
+   Trby4_m_C180by2         ;Tr/4 - p2/2
+   Trby2
+   (p2 pl1 ph20):C         ; C 180 centered on (l4+1)*Tr
+   Trby2
+   Trby4_m_C180by2         ;Tr/4 - p2/2
+
+REDOR4,
+
+   Trby4_m_N180by2
+   (p22 pl21 ph10^):N
+   Trby2_m_N180            ;Ends at (2*l4+7/4)*Tr
+   (p22 pl21 ph10^):N
+   Trby4_m_N180by2;
+
+lo to REDOR4 times l4
+
+   Trby4 
+}
+
+subroutine REDOR_CDC()
+{
+   Trby4                   ;Tr/4
+
+REDOR5,
+
+   Trby4_m_N180by2
+   (p22 pl21 ph10^):N
+   Trby2_m_N180            ;Ends at (l4+1/4)*Tr
+   (p22 pl21 ph10^):N
+   Trby4_m_N180by2
+
+lo to REDOR5 times l15
+
+   TauR                    ; No C 180 
+   TauR
+
+REDOR6,
+
+   Trby4_m_N180by2
+   (p22 pl21 ph10^):N
+   Trby2_m_N180            ;Ends at (l4+1/4)*Tr
+   (p22 pl21 ph10^):N
+   Trby4_m_N180by2;
+
+lo to REDOR6 times l15
+
+   Trby4 
+}

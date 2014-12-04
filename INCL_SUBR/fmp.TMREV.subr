@@ -1,0 +1,147 @@
+; TMREV 
+
+; Hohwy, Jaroniec, Reif, Rienstra, Griffin
+
+; Symmetry of four and 5
+
+;Calculate durations
+
+;cnst5  : Symmetry (inc/rotor period)
+;cnst6  : Base Rotor periods
+;cnst7  : Multiplier 
+
+define pulse p90TMREV
+define delay inTMREV
+
+define delay dON_TMREV
+define delay dON_TMREVpi
+define delay dCW_TMREV
+define delay maxT_TMREV
+
+define loopcounter basTMREV
+define loopcounter mulTMREV
+define loopcounter hlfTMREV
+define loopcounter maxTMREV
+define loopcounter bgNTMREV
+
+"bgNTMREV=cnst5"
+"basTMREV=cnst6"
+"mulTMREV=cnst7"
+
+"maxT_TMREV=TauR*basTMREV*mulTMREV"
+"maxTMREV=basTMREV*bgNTMREV"
+"p90TMREV=(TauR/(12*bgNTMREV))"
+
+"p28=p90TMREV"
+"d28=p90TMREV"
+
+"hlfTMREV=maxTMREV/2"
+"inTMREV=(TauR*mulTMREV/bgNTMREV)"
+
+"dON_TMREV  =0.3u"
+"dON_TMREVpi=0.3u"
+"dCW_TMREV  =maxT_TMREV"
+
+subroutine EVOL_TMREV(loopcounter incr)
+{
+if "incr<=hlfTMREV"
+{
+"dON_TMREV  =inTMREV*incr"
+"dON_TMREVpi=0.3u"
+}
+else
+{
+"dON_TMREV  =inTMREV*hlfTMREV"
+"dON_TMREVpi=inTMREV*(incr-hlfTMREV)"
+}
+
+"dCW_TMREV  =inTMREV*(maxTMREV-incr)"
+}
+
+subroutine C_TMREV(phase phx, loopcounter incr)
+{
+
+0.3u pl25:H
+
+if "incr == 0"
+{
+  (center
+     (dCW_TMREV cw):H 
+     (p2 pl1 phx):C 
+  )
+}
+if "incr <= hlfTMREV"
+{
+if "incr > 0"
+{
+  (center
+     (dON_TMREV cpds7 0.3u do dCW_TMREV cw):H 
+     (p2 pl1 phx):C 
+  )
+}
+}
+
+if "incr > hlfTMREV"
+{
+  if "incr != maxTMREV"
+  {
+    (center
+       (dON_TMREV cpds7 0.3u do dON_TMREVpi cpds8 0.3u do dCW_TMREV cw):H 
+       (p2 pl1 phx):C 
+    )
+  }
+  if "incr == maxTMREV"
+  {
+    (center
+       (dON_TMREV cpds7 0.3u do dON_TMREVpi cpds8):H
+       (p2 pl1 phx):C 
+    )
+  }
+}
+0.3u do:H
+
+}
+
+subroutine C_TMREV_SP(phase phx, loopcounter incr)
+{
+
+0.3u pl25:H
+
+if "incr == 0"
+{
+  (center
+     (dCW_TMREV cw):H 
+     (p8:spf8 pl28 phx):C 
+  )
+}
+if "incr <= hlfTMREV"
+{
+if "incr > 0"
+{
+  (center
+     (dON_TMREV cpds7 0.3u do dCW_TMREV cw):H 
+     (p8:spf8 pl28 phx):C 
+  )
+}
+}
+
+if "incr > hlfTMREV"
+{
+  if "incr != maxTMREV"
+  {
+    (center
+       (dON_TMREV cpds7 0.3u do dON_TMREVpi cpds8 0.3u do dCW_TMREV cw):H 
+       (p8:spf8 pl28 phx):C 
+    )
+  }
+  if "incr == maxTMREV"
+  {
+    (center
+       (dON_TMREV cpds7 0.3u do dON_TMREVpi cpds8):H
+       (p8:spf8 pl28 phx):C 
+    )
+  }
+}
+0.3u do:H
+
+}

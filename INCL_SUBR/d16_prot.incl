@@ -1,0 +1,17 @@
+;d16_prot.incl
+
+; Test the rf on-time for T2 measurement
+; 40ms is maximum
+
+;$COMMENT=Protection against long HC CP time
+;$CLASS=Solids PROT
+;$OWNER=nmrsu
+
+if "d16<40.1m" goto Passd16
+  1m
+  print "T2 max echo (d16) time greater than 40ms abort"
+goto HaltAcqu
+Passd16, 1m
+
+
+

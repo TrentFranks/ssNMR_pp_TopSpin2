@@ -1,0 +1,18 @@
+;1H_ON_prot.incl
+
+; Check the total RF on-time
+; 50ms is maximum
+
+;$COMMENT=Protection against long decoupling time
+;$CLASS=Solids PROT
+;$OWNER=nmrsu
+
+if "ONTIME<250m" goto PassONTIME
+1m 
+print "The total ON-time exceeds 250ms"
+goto HaltAcqu
+PassONTIME, 1m
+
+
+
+

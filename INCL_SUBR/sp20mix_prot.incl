@@ -1,0 +1,54 @@
+; Transverse R2T SQ-SQ subroutine 
+; adapted by W. Trent Franks Feb. 2010
+; FMP Berlin
+
+; Contents:
+;  R2T 
+;  Costa, PR; Sun B; Griffin, RG;
+;     J. Am. Chem. Soc. 1997, 119, 10821-10830.
+;  R2T w/ DARR 
+;pl13   : H ampl during R2T
+
+;#############################
+;#  INCLUDE THESE PARAMETERS #
+;#############################
+;p8     : Read-in/out
+;p9     : R2T duration
+;pl13   : H ampl during R2T
+;pl15   : R2T X ampl
+;pl16   : H ampl =1wr
+;pl18   : X R2T ampl
+;cnst31 : MAS Frequency
+;
+;########################
+;#  INCLUDE THESE FILES #
+;########################
+;
+;#include <TauR_Defs>
+;
+
+subroutine Longi_S20_(phase pha1, phase pha2, phase pha3)
+{
+  (p1 pl1 pha1):C   (p1 pl2):H 	
+
+  (TauRm2 pl16):H   
+  1u pl13:H 			
+  1u cw:H 
+  (p20:sp20 pha2):C 
+  2u do:H 
+  (TauRm4 pl16):H   
+  2u cpds2:H 
+
+  (p1 pl1 pha3):C 
+}
+
+subroutine Transv_S20_(phase pha1, phase pha2, phase pha3)
+{
+  (p1 pl1 pha1):C   (p1 pl2):H 	
+
+  (TauRm2 pl16):H   
+  (p20:sp20 pha2):C  (p20 pl13):H 
+  0.5u cpds2:H 
+
+  (p1 pl1 pha3):C 
+}

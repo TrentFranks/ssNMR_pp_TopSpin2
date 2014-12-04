@@ -1,0 +1,25 @@
+; t2_prot.incl
+
+; List of Protections for t2 evolution
+; For code where t2 has d30 and d0 (like the hCNH)
+
+;$COMMENT=t2 Protections
+;$CLASS=Solids INCL
+;$OWNER=nmrsu
+
+;###################
+;# Protections for #
+;#  t2 evolution   #
+;###################
+
+if "d30<40m" goto PrePassd30
+  1m 
+  print "final t2 evolution (d30) too large.  Reduce inf2, td2, or cnst30"
+  goto HaltAcqu
+PrePassd30, 1m
+
+if "d0<40m" goto PrePassd0
+  1m 
+  print "initial t2 evolution (d0) too large. Reduce inf2"
+  goto HaltAcqu
+PrePassd0, 1m

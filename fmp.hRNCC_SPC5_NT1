@@ -1,0 +1,250 @@
+; hNC with T1 evolution period on N
+; min phase cycle = 4
+;
+;######################################################
+;#                                                    #
+;# N-C SPECIFIC CP                                    #
+;# Baldus, M.; Petkova, A. T.; Herzfeld, J. H.;       #
+;#    Griffin, R. G. Mol. Phys. 1998,95, 1197-1207.   #
+;# M. Hong and R.G. Griffin;                          #
+;#    J. Am. Chem. Soc. 120, 7113-7114                #
+;#                                                    #
+;#  pl7 (15N) = 5*wr/2                                #
+;#  pl6 (13C) = 3wr/2(NCA) 7wr/2(NCO)                 #
+;#                                                    #
+;# N-C PAIN CP (use square pulse shape)               #
+;#  J. Lewandowski, G. De Pape, and                   #
+;#     R. G. Griffin; J Am Chem Soc. 129(4): 728-29   #
+;#                                                    #
+;#  pl7 (15N) = 5*wr/2                                #
+;#  pl6 (13C) = 5*wr/2  and various other conditions  #
+;#                                                    #
+;######################################################;
+;
+; HN-CP, then NC-CP, then C T2 measurement peroid
+; written by W Trent Franks
+; Modified by WTF, Shakeel A Shahid, Albert Escobedo
+; FMP Berlin
+;
+;$COMMENT=hRNcC Double CP
+;$CLASS=Solids
+;$DIM=3D
+;$TYPE=Heteronuclear
+;$SUBTYPE=Relaxation
+;$OWNER=guest
+
+;prosol relations=<solids_cp>
+
+;#include <Avancesolids.incl>
+#include <C_detect_def.incl>
+
+;######################################################
+;#                   Define Mixing                    #
+;#    SPC5_3 is Default; SPC5_2 mixing with -DSPC52   #
+;######################################################
+
+#include <fmp.SPC5.subr>
+
+;cnst11 : to adjust t=0 for acquisition, if digmod = baseopt
+"acqt0=1u*cnst11"
+
+"in0=inf1"                  ;##########################
+"d0=in0/2"		    ;#   t1_init => 90,-180   #
+"in30=inf1"                 ;##########################
+
+
+define delay ONTIME         ;##########################
+define loopcounter T1evo    ;#   Constant Duty Cycle  #
+"T1evo=larger(td1,cnst30)"  ;# Power Deposition Calcs #
+"d30=T1evo*in30"            ;##########################
+
+
+define loopcounter go_t1
+"go_t1=td1"
+
+                            ;##########################
+;$EXTERN                    ;# python insertion point #
+                            ;##########################
+
+Prepare, ze
+
+"d30=d30/2"                 ;#divide by 2 for mc macro#
+
+#ifdef SPC52
+  "ONTIME=aq+d0+d30+p11+p16+p8+2*SPC52mix"
+#else
+  "ONTIME=aq+d0+d30+p11+p16+p8+2*SPC53mix"
+#endif
+
+
+;######################################################
+;#               Protections: Pre-Check               #
+;######################################################
+
+#include <Standard_Prot.incl>
+        ;acquisition, CP time, PDSD/DARR, and echo restrictions
+#include <SPC5_prot.incl>
+       ;DQ mix parameters
+#include <t1_prot.incl>
+        ;check t1 evolution time
+#include <ONTIME_prot.incl>
+        ;total RF depsosition restriction
+
+;######################################################
+;#           Start of Active Pulse Program            #
+;######################################################
+
+Start, d1 do:H
+
+  1m rpp15                  ;##########################
+  1m rpp16                  ;#  C5 phases reset here  #
+  1m rpp25                  ;##########################
+  1m rpp26
+
+;######################################################
+;#               Protections: In Situ                 #
+;######################################################
+
+#include <t1evol_prot.incl>
+            ;check d0 and d30
+
+;######################################################
+;#                Initial excitation                  #
+;######################################################
+
+                         (p3  pl2  ph1):H
+                         (p11 pl19 ph0):H (p11:spf1 pl11 ph2):N
+                   
+0.3u
+
+;######################################################
+;#                   Nitrogen T1                      #
+;######################################################
+
+(p21  pl21  ph3):N
+d12
+(p21  pl21 ph4):N
+
+if "go_t1>1"
+{                           ;##########################
+  0.3u cpds2:H              ;#      t1 evolution      #
+                            ;##########################
+  (center
+    (d0):N
+    (p1 pl1 ph20 p2 ph21 p1 ph20):C 
+  )
+  0.3u do:H ;
+
+}
+
+;######################################################
+;#             Second CP Period (SPECIFIC)            #
+;######################################################
+
+ (p16:spf2 pl6 ph6):C (p16 pl13 ph1):H (p16 pl7 ph5):N
+
+;######################################################
+;#           Homonuclear SPC5_(3,2) Mixing            #
+;##########################!###########################
+
+  (p1 pl1 ph7):C   (p1 pl2):H  ;store
+
+#ifdef SPC52
+  subr SPC5_2exc()
+  subr SPC5_2rec()
+#else
+  subr SPC5_3exc()
+  subr SPC5_3rec()
+#endif
+
+  (p1 pl1 ph8):C   (p1 pl2):H  ;readout
+
+ 0.3u cpds2:H
+
+;#######################################################
+;#                     Acquisition                     #
+;#######################################################
+
+gosc ph31 		;start ADC with ph31 signal routing
+
+#ifdef CDC
+  d30                   ; t1 (d0) Carbon Const. Duty
+#endif
+
+1m do:H 				;decoupler off
+lo to Start times ns
+
+30m mc #0 to Start F1PH(dp5, id0 & dd30)
+
+HaltAcqu, 1m
+exit
+
+ph0 = 0			; H hX
+ph1 = {1}*4  {3}*4 	; H H90
+ph2 = 0                 ; X HX
+ph3 = 1 3               ; N storage
+ph4 = 3 3 3 3           ; N recovery
+ph5 = 0 0 2 2           ; N NC
+ph6 = {0}*16 {2}*16     ; C NC
+ph7 = {3}*8  {1}*8
+ph8 = 1 2   ; X 90
+
+
+ph31= 0 3 2 1  2 1 0 3  2 1 0 3  0 3 2 1
+      2 1 0 3  0 3 2 1  0 3 2 1  2 1 0 3
+ph20= 0
+ph21= 1
+ph22= 2
+
+;########
+;# SPC5 #
+;########
+
+ph15= (360) 90 162 234 306 18 270 342 54 126 198
+ph16= (360) 270 342 54 126 198 90 162 234 306 18
+ph25= (360) 0 72 144 216 288 180 252 324 36 108
+ph26= (360) 180 252 324 36 108 0 72 144 216 288
+
+;#######################################################
+
+;PARAMETERS:
+;p1      : C 90  (pl1)
+;p2      : C 180 (pl1)
+;p3      : H 90  (pl2)
+;p4      : H 180 (pl2)
+;p6      : C soft 90  (pl26)
+;p8      : C soft 180 (-Ds180)
+;p11     : HN CP contact pl11 (N) and sp1 (H)
+;p16     : NC CP contact pl7 (N) and pl8 (C) pl13 H
+;p18      : C Presat (-DCpre)
+;p21     : N 90 
+;p22     : N 180
+
+;pl1     : C HP pwr
+;pl2     : H HP pwr
+;pl6     : C NC-CP pwr
+;pl7     : N NC-CP pwr 
+;pl11    : N HN CP pwr
+;pl12    : H dec pwr
+;pl13    : H alt dec pwr
+;pl21    : N HP pwr
+;pl26    : C soft 90 pwr
+
+;pcpd2   : H dec pulse
+;pcpd3   : RFDR dec pulse 
+
+;spnam1  : HN CP file
+;spnam2  : NC CP shape (shape on C)
+;spnam6  : C soft 90 purge pulse (e.g. eSNOB)
+;sp1     : H CP pwr (HN) (p11)
+;o1 	 : CA or CO frequency
+;cnst1 	 : o1+cnst1=offset for specific CP
+;cnst2 	 : offset for last X pulse
+;d1      : recycle delay
+;d12	 : T1 delay on 15N
+;in0 	 : 1/swh 15N t1 dimension
+;cpdprg2 : Decoupling file cw, tppm (at pl12)
+;cnst30  : expected td1 for use in constant Duty (-DCDC)
+;cnst31  : MAS Rate
+;FnMode  : TPPI, States or States-TPPI
+;zgoptns : (-D) Cpre, purge, s180

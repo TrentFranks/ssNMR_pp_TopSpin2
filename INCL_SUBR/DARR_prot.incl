@@ -1,0 +1,14 @@
+;d8_Mix_prot.incl
+
+; Test the rf on-time for PDSD/DARR (d8)
+; 1s is allowed
+
+;$COMMENT=Protection against long PDSD/DARR time
+;$CLASS=Solids PROT
+;$OWNER=nmrsu
+
+if "d8<1000.1m" goto PassDARR
+1m
+print "Mixing time d8 exceeds 1 sec limit "
+goto HaltAcqu
+PassDARR, 1m

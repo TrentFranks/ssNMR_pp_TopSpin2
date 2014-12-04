@@ -1,0 +1,107 @@
+;hRC_HT1
+
+;Cross Polarization for X channel (13C)
+;written by WTF
+;Avance II+ version
+
+;######################################################
+;#                                                    #
+;# H-C Cross Polarization Experiment                  #
+;#                                                    #
+;#  Adjust pl10, pl20, and p10 for maximum signal.    #
+;#  The Hartman-Hahn CP condidition is B1(H)=B1(C)+-1 #
+;#  sp0 is usually a linear or tangent ramp           #
+;#  p10 is usually 1 ms                               #
+;#                                                    #
+;######################################################
+
+;$COMMENT= H-X INEPT with H Inversion-Recovery
+;$CLASS=Solids
+;$DIM=1D
+;$TYPE=MAS
+;$SUBTYPE=Relaxation
+;$OWNER=guest
+
+;prosol relations=<solids_cp>
+
+define delay ONTIME
+;#include <Avancesolids.incl>
+#include <C_detect_def.incl>
+
+;cnst11 : to adjust t=0 for acquisition, if digmod = baseopt
+"acqt0=1u*cnst11"
+
+                            ;##########################
+;$EXTERN                    ;# Python insertion point #
+                            ;##########################
+
+Prepare, ze
+
+;######################################################
+;#               Protections: Pre-Check               #
+;######################################################
+
+"ONTIME=aq+p10"
+
+#include <Standard_Prot.incl>
+        ;acq, CP time, etc.
+#include <ONTIME_prot.incl>
+        ;total RF depsosition restriction
+
+;######################################################
+;#           Start of Active Pulse Program            #
+;######################################################
+
+Start, d1 do:H
+
+                         (p4  pl2  ph0):H
+                         vd
+                         (p3  pl2  ph1):H
+  d4
+  (center (p2 pl1 ph3):C (p4 ph2):H )
+  d4
+  (ralign (p1 ph5):C     (p3 ph4):H )
+  d5
+  (center (p2 pl1 ph6):C (p4 ph7):H )
+  d5
+
+  0.3u cpds2:H ;decouple 1H during acquisition
+
+;#######################################################
+;#                     Acquisition                     #
+;#######################################################
+
+  go=Start ph31
+  1m do:H
+  30m mc #0 to Start F1QF(ivd)
+  
+HaltAcqu, 1m
+exit
+
+ph0 = 0                ; H exc
+ph1 = 0 2              ; H exc
+ph2 = 0                ; H echo
+ph3 = 0                ; X echo 
+ph4 = 3                ; H store
+ph5 = 0 0 2 2          ; C exc
+ph6 = 0                ; C echo
+ph7 = 0                ; H exc
+
+ph31= 2 0 0 2          ; receiver
+
+;#########################################################################
+
+;PARAMETERS:
+;p1      : C 90 pl1
+;p2      : C 180 pl1
+;p3      : H 90 at pl2
+;p4      : H 180 at pl2
+;pl1     : C HP pwr level
+;pl2     : H HP pwr level
+;pl12    : H dec pwr
+;pl13    : H alt dec pwr (Spinlock and CW)
+;d1      : recycle delay
+;d4      : HC INEPT time (1/4J ~ 1.5ms)
+;d5      : HC INEPT time (1/4J ~ 1.5ms)
+;pcpd2   : pulse length in decoupling sequence
+;cpdprg2 : cw, tppm (at pl12), or lgs, cwlg. cwlgs (LG-decoupling 

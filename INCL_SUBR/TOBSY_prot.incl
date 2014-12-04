@@ -1,0 +1,43 @@
+; SPC5_prot.incl
+
+; List of Protections for SPC5
+
+;$COMMENT=SPC5 Protections
+;$CLASS=Solids INCL
+;$OWNER=nmrsu
+
+;###################
+;# Protections for #
+;# TOBSY 961 &931  #
+;###################
+
+if "C931p90<20u" goto PassC931p
+  1m 
+  print "TOBSY 931 90 pulse out of range, set cnst31 to spinning speed"
+  goto HaltAcqu
+PassC931p, 1m
+
+if "C961p90<30u" goto PassC961p
+  1m 
+  print "SPC5_3 90 pulse out of range, set cnst 31 to spinning speed"
+  goto HaltAcqu
+PassC961p, 1m
+
+if "l9 < 100" goto Passl9
+  1m 
+  print "TOBSY loop (l9) out of range (100)"
+  goto HaltAcqu
+Passl9, 1m
+
+if "C931mix<10.1m" goto PassC931m
+  1m 
+  print "TOBSY duration out of range (10.1ms)"
+  goto HaltAcqu
+PassC931m, 1m
+
+if "C961mix<10.1m" goto PassC961m
+  1m 
+  print "TOBSY duration out of range (10ms)"
+  goto HaltAcqu
+PassC961m, 1m
+

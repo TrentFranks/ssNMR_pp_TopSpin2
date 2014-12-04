@@ -1,0 +1,215 @@
+;CC with DQ-SPC5 mixing (TopSpin 2.3)
+
+;######################################################
+;#                                                    #
+;# SPC5(_2,_3) DQ mixing experiment                   #
+;#  SPC5_2  (Broadband)                               #
+;#   M. Hohwy, C.M. Rienstra, C.P. Jaroniec, and      #
+;#     R.G. Griffin J. Chem. Phys. 1999,110,7983-7992 #
+;# SPC5_3  (Narrowband)                               #
+;#   M. Hohwy, C. M. Rienstra, R. G. Griffin          #
+;#     J. Chem. Phys. 2002, 117 4973-4987             #
+;#                                                    #
+;# Adjust for MINIMUM                                 #
+;#  pl15=10/3*wr (Default,SPC5_3) or 5*wr (SPC5_2)    #
+;#  l5 is a multiple of 5                             #
+;#                                                    #
+;#  ns = n*4 (full cycle =16); pl17= 7*wr; l7 >= n*7  #
+;#                                                    #
+;#  pl15(SPC5_3)= 10/3*wr; l5 >= n*10 ; ns = n*4      #
+;#  pl15(SPC5_2)= 5*wr; l5 >= n*10 ; ns = n*4         #
+;#                                                    #
+;#  Indirect Dimension phasing is 90,-180             #
+;#                                                    #
+;######################################################
+;
+; Options DP, SPC52, Cpre, CDC
+; written Barth van Rossum and W. Trent Franks
+
+;$COMMENT= HC CP with C DQ mixing
+;$CLASS=Solids
+;$DIM=2D
+;$TYPE=Homonuclear
+;$SUBTYPE=DQ mix
+;$OWNER=guest
+
+;prosol relations=<solids_cp>
+
+;#include <Avancesolids.incl>
+#include <CHD_defs.incl>
+
+;######################################################
+;#                   Define Mixing                    #
+;#        SPC5_3 is Default, SPC5_2 with -DSPC52      #
+;######################################################
+
+#include <fmp.SPC5.subr>
+
+;cnst11 : adjust t=0 for acq, if digmod = baseopt
+"acqt0=1u*cnst11"
+
+"in0=inf1"                  ;##########################
+"d0=in0/2-0.3u-p1*2/3.14159";#   t1_init => 90,-180   #
+"in30=inf1"                 ;#                        #
+define loopcounter go_t1    ;#   No increment if 1D   #
+"go_t1=td1"                 ;##########################
+
+define delay ONTIME         ;##########################
+define loopcounter T1evo    ;# Power Deposition Calcs #
+"T1evo=larger(td1,cnst30)"  ;#   Constant Duty Cycle  #
+"d30=T1evo*in30"            ;##########################
+                            
+                            ;##########################
+;$EXTERN                    ;# python insertion point #
+                            ;##########################
+
+Prepare, ze
+
+"d30=d30/2"                 ;# divide by 2 for mc macro #
+
+#ifdef SPC52
+  "ONTIME=aq+d0+d30+p10+p8+2*SPC52mix"
+#else
+  "ONTIME=aq+d0+d30+p10+p8+2*SPC53mix"
+#endif
+
+;######################################################
+;#               Protections: Pre-Check               #
+;######################################################
+
+#include <Standard_Prot.incl>
+        ;acquisition, CP time, PDSD/DARR, and echo restrictions
+#include <SPC5_prot.incl>
+        ;loop l5 
+#include <t1_prot.incl>
+        ;check t1 evolution time
+#include <ONTIME_prot.incl>
+        ;total RF depsosition restriction
+
+;######################################################
+;#           Start of Active Pulse Program            #
+;######################################################
+
+Start, d1 do:H
+
+  1m rpp15                  ;##########################  
+  1m rpp16                  ;#  C5 phases reset here  #
+  1m rpp25                  ;##########################
+  1m rpp26
+                            
+;######################################################
+;#               Protections: In Situ                 #
+;######################################################
+
+; d0,d30 checked every row                            
+#include <t1evol_prot.incl> 
+                            
+#ifdef Cpre
+ ; Carbon Presatuaration
+ (p8 pl8 ph20):C
+#endif
+
+;######################################################
+;#              Cross/Direct Polarization             #
+;######################################################
+
+#ifdef DP
+   (p1 pl1 ph10):C
+#else
+                         (p3  pl2  ph1):H
+  (p10:spf0 pl10 ph2):C  (p10 pl20 ph0):H 
+#endif
+
+if "go_t1>1"
+{                           ;##########################
+  d0 cpds2:H cpds3:D        ;#      t1 evolution      #
+  0.3u do:H  do:D           ;##########################
+}
+
+;######################################################
+;#           Homonuclear SPC5_(3,2) Mixing            #
+;##########################!###########################
+  
+  (p1 pl1 ph3):C   (p1 pl2):H  ;store
+
+#ifdef SPC52
+  subr SPC5_2exc()
+  subr SPC5_2rec()
+#else
+  subr SPC5_3exc()
+  subr SPC5_3rec()
+#endif
+  
+  (p1 pl1 ph4):C   (p1 pl2):H  ;readout
+    
+  0.3u cpds2:H cpds3:D
+
+
+;#######################################################
+;#                     Acquisition                     #
+;#######################################################
+
+gosc ph31 	; Start ADC with ph31 signal routing
+
+#ifdef CDC
+  d30           ; Constant duty cycle
+#endif
+
+1m do:H do:D    ; Decoupler off
+lo to Start times ns
+
+d1 mc #0 to Start F1PH(dp3,id0 & dd30)
+
+HaltAcqu, 1m
+exit
+
+;#######################################################
+;#             Phase Cycle (min=4, full=16)            #
+;#######################################################
+
+ph0=  0
+ph1=  1 3
+ph2=  {0}*8 {2}*8
+ph3=  1 1 3 3 
+ph4=  1 1 2 2 3 3 0 0  
+
+ph10= {1 3}*4 {3 1}*4  ; X90 DP
+
+ph20= 0 2
+
+;#######################################################
+;#                    SPC5 Phases                      #
+;#######################################################
+
+ph15= (360) 90 162 234 306 18 270 342 54 126 198
+ph16= (360) 270 342 54 126 198 90 162 234 306 18
+ph25= (360) 0 72 144 216 288 180 252 324 36 108
+ph26= (360) 180 252 324 36 108 0 72 144 216 288
+
+ph31= 2 0 1 3 0 2 3 1 0 2 3 1 2 0 1 3
+
+;PARAMETERS:
+;p1      : C 90  (pl1)
+;p2      : C 180 (pl1)
+;p3      : H 90  (pl2)
+;p8      : C Presat (-DCpre)
+;p10     : HC CP contact pl10 (C) and sp0 (H)
+;sp0     : H CP pwr
+;pl1     : C HP pwr
+;pl2     : H HP pwr
+;pl10    : C CP pwr
+;pl12    : H dec pwr
+;pl13    : H alt dec pwr (Spinlock and CW)
+;pl15    : C SPC5 pwr (10/3wr if SPC53; 5wr if SPC52)
+;pl16    : H DARR pwr (DARR = wr; PDSD =120 dB)
+;l5      : SPC5 repetitions (doubled)
+;d1      : recycle delay
+;SPC52mix: SPC52 mix time (half)
+;SPC53mix: SPC53 mix time (half)
+;pcpd2   : H dec pulse
+;cpdprg2 : cw, tppm (at pl12), or lgs, cwlg. cwlgs (LG-decoupling 
+;spnam0  : use e.g. ramp.100 for variable amplitude CP
+;cnst30  : expected td1 for use in constant Duty (-DCDC)
+;cnst31  : MAS Rate
+;FnMode  : TPPI, States or States-TPPI
+;zgoptns : (-D) D1, DP, CDC, Cpre, SPC52

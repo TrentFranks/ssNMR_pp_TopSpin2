@@ -1,0 +1,25 @@
+; POSTC7_prot.incl
+
+; List of Protections for C7
+
+;$COMMENT=C7 Protections
+;$CLASS=Solids INCL
+;$OWNER=nmrsu
+
+if "C72p90<15u" goto PassC72p90
+1m 
+print "POSTC7_2 90 pulse too long, set spinning speed (cnst31)"
+goto HaltAcqu
+PassC72p90, 1m
+
+if "l7 < 35" goto Passl7
+1m
+print "C7 loop out of range (35 or less)"
+goto HaltAcqu
+Passl7, 1m
+
+if "C72mix<5m" goto PassC72
+1m
+print "C7 period exceeds 5 ms"
+goto HaltAcqu
+PassC72, 1m

@@ -1,0 +1,24 @@
+; RFDR_prot.incl
+
+; List of Protections for RFDR
+
+;$COMMENT=SPC5 Protections
+;$CLASS=Solids INCL
+;$OWNER=nmrsu
+
+;###################
+;# Protections for #
+;#      RFDR       #
+;###################
+
+if "l3 < 100" goto Passl3
+  1m 
+  print "RFDR loop exceeds limit (100)"
+  goto HaltAcqu
+Passl3, 1m
+
+if "RFDRmix<10m" goto PassRFDR
+  1m 
+  print "RFDR duration exceeds 10ms limit"
+  goto HaltAcqu
+PassRFDR, 1m

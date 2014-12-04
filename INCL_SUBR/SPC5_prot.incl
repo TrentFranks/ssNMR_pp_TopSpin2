@@ -1,0 +1,43 @@
+; SPC5_prot.incl
+
+; List of Protections for SPC5
+
+;$COMMENT=SPC5 Protections
+;$CLASS=Solids INCL
+;$OWNER=nmrsu
+
+;###################
+;# Protections for #
+;#     SPC5_2,3    #
+;###################
+
+if "C52p90<20u" goto PassC52
+  1m 
+  print "SPC5_2 90 pulse out of range, set cnst31 to spinning speed"
+  goto HaltAcqu
+PassC52, 1m
+
+if "C53p90<30u" goto PassC53
+  1m 
+  print "SPC5_3 90 pulse out of range, set cnst 31 to spinning speed"
+  goto HaltAcqu
+PassC53, 1m
+
+if "l5 < 30" goto Passl5
+  1m 
+  print "SPC5 loop (l5) out of range (30)"
+  goto HaltAcqu
+Passl5, 1m
+
+if "SPC52mix<5m" goto PassSPC52
+  1m 
+  print "SPC5_2 duration out of range (5ms)"
+  goto HaltAcqu
+PassSPC52, 1m
+
+if "SPC53mix<5m" goto PassSPC53
+  1m 
+  print "SPC5_3 duration out of range (5ms)"
+  goto HaltAcqu
+PassSPC53, 1m
+

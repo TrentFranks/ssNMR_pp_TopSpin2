@@ -1,0 +1,49 @@
+; Longitudinal Dream SQ-SQ subroutine 
+; W. Trent Franks Jan. 2011 mod by AJN Oct. 2012 for no READ in
+; FMP Berlin
+
+;######################################################
+;#                                                    #
+;#  Dream:                                            #
+;#  Verel, R; Ernst M; Meier, BH;                     #
+;#     J. Magn. Reson. 2001, 150, 81-99.              #
+;#                                                    #
+;######################################################
+
+;######################################################
+;#                                                    #
+;#  sp20 should vary about 0.5*wr,                    #
+;#    e.g. if spinning at 60 kHz, the Dream Field     #
+;#    is ~30 kHz, then the ramp is generally about     #
+;#    5kHz (+/-15% of total)                          #
+;#                                                    #
+;#  spnam20 should be a tangent ramp as described     #                                 #
+;#  sp29= |0.5*wr| ;			              #
+;#                                                    #
+;#  p20 Mix duration    ~5 ms for CO -CA	      #
+;#                                                    #
+;#                                                    #
+;######################################################
+
+;#############################
+;#  INCLUDE THESE PARAMETERS #
+;#############################
+;p20     : Dream duration
+;pl13    : H ampl during DREAM
+;sp23    : Dream pwr
+;pl23    : Dream pwr
+;cnst31  : MAS Frequency
+;
+;########################
+;#  INCLUDE THESE FILES #
+;########################
+;
+;#include <TauR_Defs>
+;
+
+subroutine DREAM_(phase pha2)
+{
+  0.3u pl13:H cw:H
+  (p20:spf23 pl23 pha2):C   ; Mix
+  0.3u do:H 
+}

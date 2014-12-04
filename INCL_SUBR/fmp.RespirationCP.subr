@@ -1,0 +1,76 @@
+; Transverse Respiration CP subroutines
+; adapted by W. Trent Franks Apr. 2012
+; FMP Berlin
+
+; Contents:
+;   S. Jain, M. Bjerring, N.C. Neilsen
+;      Journ. Chem. Phys. Lett. 3 703
+;
+;#############################
+;#  INCLUDE THESE PARAMETERS #
+;#############################
+;
+;l21   	: rotor periods for RESPIRATION
+;cnst31 : MAS Frequency
+;
+;#################
+;#  Calculations #
+;#################
+
+define pulse pHC_H_RESP
+define delay HC_RESP_mix
+    "pHC_H_RESP=(0.5s/cnst31)-(p40/2.0)"
+    "HC_RESP_mix=(1.0s/cnst31)*l20"	;RESPIRATION mixing time
+
+;################
+;# Pulse blocks #
+;# RESPIRATION  #
+;################
+
+subroutine HC_RESPIRATION(phase phC)
+{
+HC_RESP,
+     (pHC_H_RESP pl40 ph20):H
+     (pHC_H_RESP      ph22):H
+     (p40        pl41 ph20):H (p40 pl31 phC):C
+lo to HC_RESP times l20
+
+}
+
+define pulse pHN_H_RESP
+define delay HN_RESP_mix
+    "pHN_H_RESP=(0.5s/cnst31)-(p42/2.0)"
+    "HN_RESP_mix=(1.0s/cnst31)*l21"	;RESPIRATION mixing time
+
+subroutine HN_RESPIRATION(phase phN)
+{
+HN_RESP,
+     (pHN_H_RESP pl43 ph20):H
+     (pHN_H_RESP      ph22):H
+     (p42        pl42 ph20):H (p42 pl33 phN):N
+lo to HN_RESP times l21
+
+}
+
+define pulse pNC_RESP
+define delay NC_RESP_mix
+    "pNC_RESP=(0.5s/cnst31)-(p44/2.0)"
+    "NC_RESP_mix=(1.0s/cnst31)*l22"	;RESPIRATION mixing time
+
+subroutine NC_Nlck_RESPIRATION(phase phC)
+{
+NC_N_RESP,
+     (pNC_RESP pl44 ph20):N
+     (pNC_RESP      ph22):N
+     (p44      pl45 ph20):N (p44 pl35 phC):C
+lo to NC_N_RESP times l22
+}
+
+subroutine NC_Clck_RESPIRATION(phase phC)
+{
+NC_C_RESP,
+                              (pNC_RESP pl34 ph20):C
+                              (pNC_RESP      ph22):C
+     (p44        pl45 ph20):N (p44 pl35 phC):C
+lo to NC_C_RESP times l22
+}

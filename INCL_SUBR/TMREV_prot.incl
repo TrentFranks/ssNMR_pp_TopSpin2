@@ -1,0 +1,62 @@
+; REDOR_prot.incl
+
+; List of Protections for TMREV
+
+;$COMMENT=REDOR/TEDOR Protections
+;$CLASS=Solids INCL
+;$OWNER=nmrsu
+
+
+;cnst5  : Symmetry (inc/rotor period)
+;cnst6  : Base Rotor periods
+;cnst7  : Multiplier 
+
+
+;###################
+;# Protections for #
+;#      TMREV      #
+;###################
+
+
+if "basTMREV < 20" goto basTMREVless
+  1m
+  print "TMREV base rotor periods (cnst6) exceeds limit (20)"
+  goto HaltAcqu
+basTMREVless, 1m
+
+if "basTMREV > 1" goto basTMREVmore
+  1m
+  print "Too few TMREV base rotor periods (cnst6) (2)"
+  goto HaltAcqu
+basTMREVmore, 1m
+
+if "bgNTMREV < 5.1" goto bgNless
+  1m
+  print "TMREV symmetry (cnst5) exceeds limit (5)"
+  goto HaltAcqu
+bgNless, 1m
+
+if "bgNTMREV > 3.9" goto bgNmore
+  1m
+  print "TMREV symmetry is below limit (4)"
+  goto HaltAcqu
+bgNmore, 1m
+
+if "mulTMREV > 0" goto mulTMREVmore
+  1m
+  print "TMREV multiplier (cnst7) below limit (1)"
+  goto HaltAcqu
+mulTMREVmore, 1m
+
+if "mulTMREV < 10" goto mulTMREVless
+  1m
+  print "TMREV multiplier (cnst7) above limit (10)"
+  goto HaltAcqu
+mulTMREVless, 1m
+
+if "maxT_TMREV < 4.01m" goto MaxTMREV
+  1m
+  print "TMREV Refocusing exceeds 4 ms limit, reduce cnst 5 or 6"
+  goto HaltAcqu
+MaxTMREV, 1m
+

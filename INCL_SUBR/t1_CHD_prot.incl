@@ -1,0 +1,24 @@
+; t1.incl
+
+; List of Protections for t1 evolution
+
+;$COMMENT=t1 Protections
+;$CLASS=Solids INCL
+;$OWNER=nmrsu
+
+;###################
+;# Protections for #
+;#  t1 evolution   #
+;###################
+
+if "d30<150.1m" goto Passd30
+1m
+print "final t1 evolution (d30) too large.  Reduce inf1, td1, or cnst30"
+goto HaltAcqu
+Passd30, 1m
+
+if "d0<150.1m" goto PrePassd0
+1m
+print "initial t1 evolution (d10) too large. Reduce inf1"
+goto HaltAcqu
+PrePassd0, 1m

@@ -1,0 +1,17 @@
+;p8_prot.incl
+
+; Test the rf on-time for Carbon presaturation
+; 10ms is maximum
+
+;$COMMENT=Protection for C presatuaration
+;$CLASS=Solids PROT
+;$OWNER=nmrsu
+
+if "p8<20.1m" goto Passp8
+1m 
+print "13C presaturation exceeds 20msec limit!"
+goto HaltAcqu
+Passp8, 1m
+
+
+

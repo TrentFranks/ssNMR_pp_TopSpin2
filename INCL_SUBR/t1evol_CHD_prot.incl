@@ -1,0 +1,24 @@
+;t1evol_prot.incl
+
+; List of Protections for t1 evolution
+
+;$COMMENT=t1 Protections
+;$CLASS=Solids INCL
+;$OWNER=nmrsu
+
+;###################
+;# Protections for #
+;#  t1 evolution   #
+;###################
+
+if "d30<150.1m" goto Passd30ev
+  1m
+  print "final t1 (d30) became too large, aborted"
+  goto HaltAcqu
+Passd30ev, 1m
+
+if "d0<150.1m" goto Passd0ev
+  1m
+  print "t2 (d0) became too large, aborted"
+  goto HaltAcqu
+Passd0ev, 1m

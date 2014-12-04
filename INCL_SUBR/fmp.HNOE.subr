@@ -1,0 +1,52 @@
+; Transverse PDSD SQ-SQ subroutine 
+; adapted by W. Trent Franks Feb. 2010
+; FMP Berlin
+
+; Contents:
+;  NOESY 
+
+
+;#############################
+;#  INCLUDE THESE PARAMETERS #
+;#############################
+;d8     : NOE mixing time
+
+subroutine NOE()
+{
+  2u 
+  TauRm2
+  d8				
+  TauRm2
+  2u
+}
+
+subroutine NOE_d9()
+{
+  2u
+  TauRm2
+  d9				
+  TauRm2
+  2u
+}
+
+subroutine NOEs23_(phase pha1)
+{
+  2u
+  TauRm4
+  2u
+  d8				
+  (p23:spf23 pl23 pha1):H
+  TauRm2
+  2u
+}
+
+subroutine NOEs23_d9(phase pha1)
+{
+  2u
+  TauRm4
+  2u
+  d9
+  (p23:spf23 pl23 pha1):H
+  TauRm2
+  2u
+}

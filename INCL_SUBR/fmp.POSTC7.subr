@@ -1,0 +1,96 @@
+; Transverse POST SQ-SQ subroutines 
+; written by W. Trent Franks Feb. 2010
+; FMP Berlin
+
+; Contents:
+;  POST-C7_2
+; Contents:
+;  M. Hohwy, H. J. Jakobsen, M. Eden, M. H. Levitt, N. C. Nielsen
+;  J. Chem. Phys. 1998 107 2686-2694
+;
+;#########################
+;#  INCLUDE THESE PHASES #
+;#########################
+;
+;POST_C7
+;ph17=(65536) 0 9362 18725 28087 37449 46811 56174 
+;ph18=(65536) 32768 42130 51493 60855 4681 14043 23406
+;ph27=(65536) 16384 25746 35109 44471 53833 63195 7022 
+;ph28=(65536) 49152 58514 2341 11703 21065 30427 39790
+;
+;#############################
+;#  INCLUDE THESE PARAMETERS #
+;#############################
+;
+;l7   	: C elements (x7; x14 for full CSA compensation)
+;pl17   : C7 X ampl (7wr (C7_2)
+;cnst31 : MAS Frequency 
+;
+;#################
+;#  Calculations #
+;#################
+;
+;  POSTC7_2
+;
+   define pulse C72p90
+   define pulse C72p270
+   define pulse C72p360
+   define delay C72mix
+
+   "C72p90 =((0.25s/cnst31)/7.0)"
+   "C72p270=((0.75s/cnst31)/7.0)"
+   "C72p360=((1.00s/cnst31)/7.0)"
+   "C72mix=(10*C72p360)*l7"   ;C7 mixing time
+
+;###################
+;# Building blocks #
+;#    POST-C7_2    #
+;###################
+
+subroutine C7_2exc()
+{
+  1u rpp27
+  1u rpp28
+  (TauRm4 pl16):H 
+  1u pl17:C  pl13:H 
+  1u cw:H  ;
+
+if (l7 >= 1)
+{
+C72,
+    C72p90:C   ph27 ipp17 ipp18   
+    C72p360:C  ph28^
+    C72p270:C  ph27^
+lo to C72 times l7   ;Number of C7's
+}
+}
+
+subroutine C7_2rec()
+{
+
+if (l7 >= 1)
+{
+C72r,
+    C72p90:C   ph27         
+    C72p360:C  ph28^
+    C72p270:C  ph27^
+lo to C72r times l7   ;Number of C5's
+}
+  2u do:H   
+  TauRm2
+}
+
+subroutine C7_2rec_dq()
+{
+
+if (l7 >= 1)
+{
+C72r,
+    C72p90:C   ph17         
+    C72p360:C  ph18^
+    C72p270:C  ph17^
+lo to C72r times l7   ;Number of C7's
+}
+  2u do:H   
+  TauRm2
+}

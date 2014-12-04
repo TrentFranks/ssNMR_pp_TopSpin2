@@ -1,0 +1,164 @@
+; Transverse SPC5 SQ-SQ subroutines 
+; written by W. Trent Franks Feb. 2010
+; FMP Berlin
+
+; Contents:
+;  SPC5_2  (Broadband)
+;  M. Hohwy, C.M. Rienstra, C.P. Jaroniec, and R.G. Griffin
+;  J. Chem. Phys. 1999,110,7983-7992
+;  SPC5_3  (Narrowband)
+;  M. Hohwy, C. M. Rienstra, R. G. Griffin
+;  J. Chem. Phys. 2002, 117 4973-4987
+;
+;#########################
+;#  INCLUDE THESE PHASES #
+;#########################
+;
+;SPC5
+;ph15= (360) 90 162 234 306 18 270 342 54 126 198
+;ph16= (360) 270 342 54 126 198 90 162 234 306 18
+;ph25= (360) 0 72 144 216 288 180 252 324 36 108
+;ph26= (360) 180 252 324 36 108 0 72 144 216 288
+;
+;#############################
+;#  INCLUDE THESE PARAMETERS #
+;#############################
+;
+;l5   	: C elements (x5; x10 for full CSA compensation)  ;
+;pl15   : C5 X ampl (10wr/3 (SPC5_3) or 5wr (SPC5_2)
+;cnst31 : MAS Frequency 
+;
+;#################
+;#  Calculations #
+;#################
+
+;  SPC5_2  (Broadband)
+
+   define pulse C52p90
+   define pulse C52p270
+   define pulse C52p360
+   define delay SPC52mix
+
+   "C52p90 =((0.25s/cnst31)/5.0)"
+   "C52p270=((0.75s/cnst31)/5.0)"
+   "C52p360=((1.00s/cnst31)/5.0)"
+   "SPC52mix=(10*C52p360)*l5"   ;SPC5 mixing time
+
+;  SPC5_3  (Narrowband)
+   define pulse C53p90
+   define pulse C53p270
+   define pulse C53p360
+   define delay SPC53mix
+
+   "C53p90 =(0.75s/cnst31)/10.0"
+   "C53p270=(2.25s/cnst31)/10.0"
+   "C53p360=(3.00s/cnst31)/10.0"
+   "SPC53mix=(10*C53p360)*l5"   ;SPC5 mixing time
+
+;###################
+;# Building blocks #
+;#      SPC5 2     #
+;###################
+
+subroutine SPC5_2exc()
+{
+  1u rpp25
+  1u rpp26
+  (TauRm4 pl16):H 
+  1u pl15:C  pl13:H 
+  1u cw:H  ;
+
+if (l5 >= 1)
+{
+C52,
+    C52p90:C   ph25 ipp15 ipp16        
+    C52p360:C  ph26^
+    C52p270:C  ph25^
+lo to C52 times l5   ;Number of C5's
+}
+}
+
+subroutine SPC5_2rec()
+{
+
+if (l5 >= 1)
+{
+C52r,
+    C52p90:C   ph25         
+    C52p360:C  ph26^
+    C52p270:C  ph25^
+lo to C52r times l5   ;Number of C5's
+}
+  2u do:H   
+  TauRm2
+}
+
+subroutine SPC5_2rec_dq()
+{
+
+if (l5 >= 1)
+{
+C52r,
+    C52p90:C   ph15         
+    C52p360:C  ph16^
+    C52p270:C  ph15^
+lo to C52r times l5   ;Number of C5's
+}
+  2u do:H   
+  TauRm4
+  1u pl12:H 
+}
+
+;###################
+;# Building blocks #
+;#      SPC5 3     #
+;###################
+
+
+subroutine SPC5_3exc()
+{
+  1u rpp25
+  1u rpp26
+  (TauRm4 pl16):H 
+  1u pl15:C  pl13:H 
+  1u cw:H  ;
+
+if (l5 >= 1)
+{
+C53,
+    C53p90:C   ph25 ipp15 ipp16        
+    C53p360:C  ph26^
+    C53p270:C  ph25^
+lo to C53 times l5   ;Number of C5's
+}
+}
+
+subroutine SPC5_3rec()
+{
+
+if (l5 >= 1)
+{
+C53r,
+    C53p90:C   ph25         
+    C53p360:C  ph26^
+    C53p270:C  ph25^
+lo to C53r times l5   ;Number of C5's
+}
+  2u do:H   
+  TauRm2
+}
+
+subroutine SPC5_3rec_dq()
+{
+
+if (l5 >= 1)
+{
+C53r,
+    C53p90:C   ph15         
+    C53p360:C  ph16^
+    C53p270:C  ph15^
+lo to C53r times l5   ;Number of C5's
+}
+  2u do:H   
+  TauRm4
+}

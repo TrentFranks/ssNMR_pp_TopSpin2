@@ -1,0 +1,90 @@
+; Transverse PDSD SQ-SQ subroutine 
+; adapted by W. Trent Franks Feb. 2010
+; FMP Berlin
+
+; Contents:
+;  PDSD, DARR/RAD  
+
+;#####################
+;#  PDSD & DARR/RAD  #
+;#####################
+;Szeverenyi, NM and Sullivan, MJ and Maciel, GE. 
+;  Journ Magn Reson 47(3):462-475, 1982
+;Takegoshi, K; Nakamura, S; Terao, T. 
+;  Chem Phys Lett. 344:631-637, 2001
+;C.R. Morcombe, V. Gaponenko, R.A. Byrd, & K.W. Zilm. 
+;  J Am Chem Soc 2004, 126, 7196-7197.
+
+;#############################
+;#  INCLUDE THESE PARAMETERS #
+;#############################
+;pl16   : 1H ampl (120 for PDSD)
+;d8     : PDSD/DARR mixing time
+
+subroutine PDSD_DARR()
+{
+  1u pl16:H 			
+  1u cw:H 
+  TauRm2
+  d8				
+  TauRm2
+  2u do:H   
+}
+
+subroutine DARR_d9()
+{
+  1u pl16:H 			
+  1u cw:H 
+  TauRm2
+  d9				
+  TauRm2
+  2u do:H   
+}
+
+subroutine DARRs6_(phase pha1)
+{
+  2u
+  (p6:spf6 pl26 pha1):C  (p6 pl12):H 
+  1u pl16:H 			
+  TauRm4
+  1u cw:H 
+  d8				
+  TauRm2
+  2u do:H   
+}
+
+subroutine DARRs6_d9(phase pha1)
+{
+  2u
+  (p6:sp6 pl26 pha1):C  (p6 pl12):H 
+  1u pl16:H 			
+  TauRm4
+  1u cw:H 
+  d9				
+  TauRm2
+  2u do:H
+}
+
+subroutine DARRs7_(phase pha1)
+{
+  2u
+  (p7:spf7 pl27 pha1):C  (p7 pl12):H 
+  1u pl16:H 			
+  TauRm4
+  1u cw:H 
+  d8				
+  TauRm2
+  2u do:H   
+}
+
+subroutine DARRs7_d9(phase pha1)
+{
+  2u
+  (p7:spf7 pl27 pha1):C   (p7 pl12):H 
+  1u pl16:H 			
+  TauRm4
+  1u cw:H 
+  d9				
+  TauRm2
+  2u do:H
+}

@@ -1,0 +1,126 @@
+; Transverse RFDR SQ-SQ subroutines 
+; adapted by W. Trent Franks Feb. 2010
+; FMP Berlin
+
+; Contents:
+;   A.E. Bennett, J.H. OK, S.. Vega, R.G. Griffin
+;      Journ. Chem. Phys. 96 8624
+;
+;#########################
+;#  INCLUDE THESE PHASES #
+;#########################
+;
+;RFDR (xy8)
+;ph23= 0 1 0 1 1 0 1 0
+;ph24= 1 2 1 2 2 1 2 1 
+;
+;#############################
+;#  INCLUDE THESE PARAMETERS #
+;#############################
+;
+;l3   	: rotor periods for RFDR (x4; x8 for full compensation)  ;
+;cnst31 : MAS Frequency 
+;
+;########################
+;#  INCLUDE THESE FILES #
+;########################
+;
+;  #include <TauR_Defs>
+;
+;#################
+;#  Calculations #
+;#################
+
+define delay dRFDR_Xp180
+define delay dRFDR_Xcmpd
+define delay RFDRmix
+    "dRFDR_Xp180=(0.5s/cnst31)-(p2/2)"
+    "dRFDR_Xcmpd=(0.5s/cnst31)-(p2/2)-(p1)"
+    "RFDRmix=(1s/cnst31)*l3"      		;RFDR mixing time
+
+;################
+;# Pulse blocks #
+;#    RFDR      #
+;################
+
+subroutine RFDR_()
+{
+  2u
+  (TauRm4 pl16):H 
+  1u pl13:H 
+  1u cpds3:H 
+
+if (l3 >= 1)
+{
+RFDR,
+    dRFDR_Xp180
+    (p2 pl1 ph23^):C 
+    dRFDR_Xp180
+lo to RFDR times l3   ;RFDR rotor periods
+}
+
+    1u do:H 
+    1u pl16:H       ;pl16 should match MAS frequency
+    1u cw:H   
+
+    d8				  ;DARR mixing period
+
+    1u do:H   
+    (TauRm2 pl16):H   ;pl16 should match MAS frequency
+}
+
+subroutine RFDR_cmpd()
+{
+  2u
+  (TauRm4 pl16):H 
+  1u pl13:H 
+  1u cpds3:H 
+
+if (l3 >= 1)
+{
+RFDR,
+    dRFDR_Xcmpd
+    (p1     ph23 ):C 
+    (p2     ph24^):C 
+    (p1     ph23^):C 
+    dRFDR_Xcmpd
+lo to RFDR times l3   ;RFDR rotor periods
+}
+
+    1u do:H 
+    1u pl16:H 
+    1u cw:H   
+
+    d8				;DARR mixing period
+
+    1u do:H   
+    (TauRm4 pl16):H   ;pl16 should match MAS frequency
+}
+
+subroutine RFDR_cmpd2()
+{
+  2u
+  (TauRm4 pl16):H 
+  1u pl13:H 
+  1u cpds3:H 
+
+if (l3 >= 1)
+{
+RFDR,
+    dRFDR_Xcmpd
+    (p1     ph23 ):C 
+    (p2     ph24 ):C 
+    (p1     ph23 ):C 
+    dRFDR_Xcmpd
+lo to RFDR times l3   ;RFDR rotor periods
+}
+
+    1u do:H 
+    1u pl16:H 
+    1u cw:H   
+
+    d8				;DARR mixing period
+
+    1u do:H   
+    (TauRm4 pl16):H   ;pl16 should match MAS frequency
+}

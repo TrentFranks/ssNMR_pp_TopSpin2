@@ -1,0 +1,145 @@
+;RX_T1T2
+
+;Direct Polarization for X channel (13C)
+;Options for Measurement of T1 and T2 with vd list
+;written by WTF
+;Avance II+ version
+
+;######################################################
+;#                                                    #
+;#  C Direct Polarization Experiment                  #
+;#                                                    #
+;#   echo -X (C) Spin Echo *T2* is ~0.6*Signal(t0)    #
+;#   Does ~NOT~ compensate for Jcoupling by Default   #
+;#                                                    #
+;# s180 -X (C) Soft Spin Echo *T2* is ~0.6*Sig(t0)    #
+;# ~DOES~ compensate for J-coupling evolution if set  #
+;#                                                    #
+;#  fmp.hRX_XT2 or fmp.hRX_T1T2 (with -DCT2) for 2D   #
+;#                                                    #
+;#     -Carbon Direct Exc. Inversion Recovery         #
+;#   Use appropriate vdlist with Topspin Analysis     #
+;# Analysis -> T1/T2 Relaxation Analysis -> function  #
+;#                                                    #
+;#  MUST DEFINE ZGOPTN: CT1 CT2 CT2SP                 #
+;#                                                    #
+;######################################################
+
+
+;$COMMENT= Direct polarization with optional CT1, CT2 periods
+;$CLASS=Solids
+;$DIM=2D
+;$TYPE=Direct Polarization
+;$SUBTYPE=Relaxation
+;$OWNER=Guest
+;prosol relations=<solids_cp>
+
+define delay ONTIME
+;#include <Avancesolids.incl>
+#include <C_detect_def.incl>
+
+;cnst11 : to adjust t=0 for acquisition, if digmod = baseopt
+"acqt0=1u*cnst11"
+
+                            ;##########################
+;$EXTERN                    ;# Python insertion point #
+                            ;##########################
+
+1 ze
+
+;######################################################
+;#           Start of Active Pulse Program            #
+;######################################################
+
+2 d1 do:H
+
+;######################################################
+;#               Protections: In Situ                 #
+;######################################################
+
+#ifdef CT2
+"ONTIME=aq+2*d6"
+"d6=vd"
+#endif
+
+#ifdef CT2SP
+"ONTIME=aq+2*d6"
+"d6=vd"
+#endif
+
+#ifdef CT1
+"ONTIME=aq"
+"d6=1m"
+#endif
+
+#include <Standard_Prot.incl>
+        ;acquisition, CP time, PDSD/DARR, and echo restrictions
+#include <ONTIME_prot.incl>
+        ;total RF depsosition restriction
+
+#ifdef CT1
+  (p2 pl1 ph2):C 
+  vd
+#endif
+
+  0.3u cpds2:H  ;decouple 1H during acquisition
+
+  (p1 pl1 ph1):C 
+
+#ifdef CT2
+  vd
+  (p2 pl1 ph2):C 
+  vd
+#endif
+
+#ifdef CT2SP
+  vd         
+  (p8:spf8 pl28 ph2):C 
+  vd
+#endif
+  
+;#######################################################
+;#                     Acquisition                     #
+;#######################################################
+
+  go=2 ph31         
+  1m do:H 
+  d1 mc #0 to 2 F1QF(ivd) 
+
+HaltAcqu, 1m
+exit
+
+
+ph1 = 1 3 2 0          ; X Hard Pulse
+ph2 = 0 0 1 1 
+
+#ifdef CT2
+ph31= 0 2 3 1           ; receiver
+#endif
+
+#ifdef CT2SP
+ph31= 0 2 3 1           ; receiver
+#endif
+
+#ifndef CT2
+#ifndef CT2SP
+ph31= 0 2 1 3           ; receiver
+#endif
+#endif
+
+;#################################################
+
+;PARAMETERS:
+;p1      : C 90  (pl1)
+;p2      : C 180 (pl1)
+;p8      : C soft 180 (spnam8, pl28) use -DechoSP
+;pl1     : C HP pwr level
+;pl28    : C soft 180 
+;pl12    : H dec pwr
+;pl13    : H alt dec pwr (Spinlock and CW)
+;d1      : recycle delay
+;d6      : Echo delay -Decho 
+;pcpd2   : pulse length in decoupling sequence
+;cpdprg2 : cw, tppm (at pl12), or lgs, cwlg. cwlgs (LG-decoupling 
+;spnam8  : soft X 180 e.g. rSnob
+;zgoptns : (-D) CT1, CT2(SP)

@@ -1,0 +1,206 @@
+;HN Proton-Detect INEPT x-fer experiment (TopSpin 2.3)
+
+;######################################################
+;#                                                    #
+;#  HN HSQC for solids                                #
+;#                                                    #
+;######################################################
+;
+;$COMMENT= HN INEPT Transfer Experiment
+;$CLASS=Solids
+;$DIM=2D
+;$TYPE= 1H detect Hetero
+;$SUBTYPE=Scalar Transfer
+;$OWNER=guest
+;
+#include <HCN_defs.incl>
+
+;######################################################
+;#          Define Scalar Mixing Parameters           #
+;######################################################
+
+define delay TauHN
+define delay TauHC
+define delay TauHC2
+"TauHC=d4"
+"TauHC2=d5"
+"TauHN=d26"
+
+;######################################################
+;#                Evolution Parameters                #
+;######################################################
+
+"in0=inf1"                  ;##########################
+"d0=3u"                     ;#     t1_init => 0,0     #
+"in2=inf1/2"                ;##########################
+
+"in20=1u*cnst1"             ;##########################
+"d20=3u"                    ;#     t1_init => 0,0     #
+"in21=1u*cnst1/2"           ;##########################
+
+define loopcounter go_t1
+"go_t1=td1"
+
+define loopcounter T1evo 
+"T1evo=larger(td1,cnst30)"
+define delay Tmax
+"Tmax=T1evo*larger(in2,in20)" 
+
+"d2= TauR+Tmax"
+"d21=TauR+Tmax"
+
+define delay ONTIME
+                            ;##########################
+;$EXTERN                    ;# python insertion point #
+                            ;##########################
+
+Prepare, ze
+
+"d2=d2/2"                 ;# divide by 2 for mc macro #
+"d21=d21/2"               ;# divide by 2 for mc macro #
+
+;######################################################
+;#               Protections: Pre-Check               #
+;######################################################
+
+"ONTIME=aq+4*p3+2*p4+p5+5*p21+4*p22+4*p1+2*p2+d18"
+
+#include <1H_ON_prot.incl>
+        ;total RF depsosition restriction
+; Protections for Proton Presat, H Acq, etc
+
+Start, d1 do:N
+
+;######################
+;#      PRESAT        #
+;######################
+
+#ifdef Pre
+  3u pl18:H
+  d18 cw:H ph20
+  d13 do:H
+#endif
+
+;#####################
+;#     HN INEPT      #
+;#####################
+
+  (p3 pl2 ph1):H
+  TauHN
+  (center (p4 pl2 ph1):H (p2 pl1 ph2):C (p22 pl21 ph2):N )
+  TauHN
+
+;#############
+;# 1H Purge  #
+;#############
+
+#ifdef PP
+  (p5 ph1):H
+#endif
+
+;#################################
+;# Refocus into Pure phase Nx Cx #
+;#################################
+
+  (p3 pl2 ph3):H  (p1 pl1 ph4):C (p21 pl21 ph4):N
+  TauHN
+  (center (p4 pl2 ph1):H (p2 pl1 ph2):C (p22 pl21 ph2):N )
+  TauHN
+
+;##################
+;# Store along Z  #
+;##################
+
+  (p1 pl1 ph5):C (p21 pl21 ph5):N
+
+;########################
+;# Time evolution on Sx #
+;########################
+
+  3u cpds2:H
+  (center
+    (d2 p21 ph6 d0 p21 ph7 d2):N
+    (d21 p1 ph6 d20 p1 ph7 d21):C
+  )
+  3u do:H
+
+;###############
+;# MISSISSIPPI #
+;###############
+
+  (p18 pl18 ph20):f1
+  (p18 ph21):f1
+  (p18 ph20):f1
+  (p18 ph21):f1
+ 
+
+;####################
+;# INEPT Back to 1H #
+;####################
+
+  (p1 pl1 ph8):C (p21 pl21 ph8):N
+  
+  TauHN
+  (center (p4 pl2 ph1):H (p2 pl1 ph2):C (p22 pl21 ph2):N )
+  TauHN
+  
+  (p3 pl2 ph10):H  (p1 pl1 ph9):C (p21 pl21 ph9):N
+  
+  TauHN
+  (center (p4 pl2 ph1):H (p2 pl1 ph2):C (p22 pl21 ph2):N )
+  TauHN
+
+  0.5u pl3:N pl4:C     ; GARP power on 15N
+  1u  cpd3:N cpd4:C
+
+  go=Start ph31
+  1m do:N do:C
+
+  30m mc #0 to Start
+      F1PH(ip6, id0 & dd2 & id20 & dd21)
+
+HaltAcqu, 1m
+exit
+
+;#####################
+;#  Phase Cycle, n>4 #
+;#####################
+
+ph1 = 0
+ph2 = {0}*8 {2}*8
+ph3 = 1
+ph4 = 0
+ph5 = 1
+ph6 = 0 2
+ph7 = 0 0 2 2 
+ph8 = 0
+ph9 = {1}*4 {3}*4
+ph10= {0}*8 {2}*8
+
+ph20= 0
+ph21= 1
+ph22= 2
+
+ph31= 0 2 2 0   2 0 0 2   2 0 0 2   0 2 2 0
+
+;######################################################################
+
+;PARAMETERS:
+;p1      : C 90 at pl1
+;p2      : C 180 at pl1
+;p3      : H 90 at pl2
+;p4      : H 180 at pl2
+;p5      : H spinlock purge
+;p21     : N 90 pl21
+;p22     : N 180 pl21
+;d0      : initial t1 (3u)
+;d1      : recycle delay
+;d2      : total t1 ev time
+;d26     : HN INEPT time (1/4J ~ 2.3ms)
+;NS      : 4 * n
+;DS      : >= 4
+;pl1     : C HP pwr level
+;pl2     : H HP pwr level
+;pl21    : N HP pwr level
+;cpds3   : N dec cpdprg3
+;zgoptns : (-D) Pre, PP

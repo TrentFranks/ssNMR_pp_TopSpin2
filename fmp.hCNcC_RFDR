@@ -1,0 +1,307 @@
+; hCNcC3D with RFDR mixing (and PDSD/DARR)
+
+;######################################################
+;#                                                    #
+;# N-C SPECIFIC CP                                    #
+;# Baldus, M.; Petkova, A. T.; Herzfeld, J. H.;       #
+;#    Griffin, R. G. Mol. Phys. 1998,95, 1197-1207.   #
+;# M. Hong and R.G. Griffin;                          #
+;#    J. Am. Chem. Soc. 120, 7113-7114                #
+;#                                                    #
+;#  pl6 (15N) = 5*wr/2                                #
+;#  pl7 (CA) = 3wr/2(NCA) 7wr/2(NCO)                 #
+;#                                                    #
+;#  pl16 (15N) = 5*wr/2                                #
+;#  pl17 (CO) = 3wr/2(NCA) 7wr/2(NCO)                 #
+;#                                                    #
+;######################################################;
+;HC-CP, then CN-CP, then NC, then CC mixing
+;written by W Trent Franks
+;Avance II+ version
+;
+;$COMMENT=hCNCC Triple CP 
+;$CLASS=Solids
+;$DIM=3D
+;$TYPE=Heteronuclear
+;$SUBTYPE=TCP
+;$OWNER=guest
+
+;prosol relations=<solids_cp>
+
+;#include <Avancesolids.incl>
+#include <C_detect_def.incl>
+
+;######################################################
+;#                   Define Mixing                    #
+;#  PDSD/DARR is Default, add Selective 90 w/ option  #
+;######################################################
+
+#include <fmp.RFDR.subr>
+
+;cnst11 : to adjust t=0 for acquisition, if digmod = baseopt
+"acqt0=1u*cnst11"
+
+; Setup for constant duty cycle during setup
+
+define delay darr
+        "darr=d8-4u"
+
+;cnst11 : to adjust t=0 for acquisition, if digmod = baseopt
+"acqt0=1u*cnst11"
+
+;Carbon
+"in0=inf1"                  ;##########################
+"d0=p21+p21+p22+2u"         ;#   t1_init => 0,    0   #
+"in29=inf1"                 ;##########################
+
+;Nitrogen
+"in10=inf2"                 ;##########################
+"d10=p1+p1+p2+2u"           ;#   t2_init => 0,0       #
+"in30=inf2"                 ;##########################
+
+define delay ONTIME         ;##########################
+define loopcounter T1evo    ;#                        #
+"T1evo=larger(td2,cnst30)"  ;#   Constant Duty Cycle  #
+"d30=T1evo*in30"            ;#                        #
+define loopcounter T2evo    ;# Power Deposition Calcs #
+"T2evo=larger(td1,cnst29)"  ;#                        #
+"d29=T2evo*in29"            ;##########################
+
+define loopcounter go_t1
+"go_t1=td2"
+define loopcounter go_t2
+"go_t2=td1"
+                            ;##########################
+;$EXTERN                    ;# python insertion point #
+                            ;##########################
+
+aqseq 312
+
+Prepare, ze
+
+"d30=d30/2"                 ;#divide by 2 for mc macro#
+"d29=d29/2"                 ;#divide by 2 for mc macro#
+
+"ONTIME=aq+d0+d30+d10+d29+p11+p16+p8+p17" ;# DARR not in  #
+
+;######################################################
+;#               Protections: Pre-Check               #
+;######################################################
+
+#include <Standard_Prot.incl>
+       ;acquisition, CP time, PDSD/DARR, and echo restrictions
+#include <DARR_prot.incl>
+        ;d8
+#include <t1_prot.incl>
+        ;check t1 evolution time
+#include <t2_prot.incl>
+        ;check t1 evolution time
+#include <ONTIME_prot.incl>
+        ;total RF depsosition restriction
+
+;######################################################
+;#           Start of Active Pulse Program            #
+;######################################################
+
+Start, 30m do:H
+
+;######################################################
+;#               Protections: In Situ                 #
+;######################################################
+
+#include <t1evol_prot.incl>
+            ;check d0 and d30
+#include <t2evol_prot.incl>
+            ;check d10 and d29
+  
+  d1 
+
+;######################################################
+;#                Initial excitation                  #
+;######################################################
+  
+
+                         (p3  pl2  ph1):H
+  (p10:spf0 pl10 ph2):C  (p10 pl20 ph0):H 
+
+if "go_t2>1"
+{
+                            ;##########################
+  0.3u cpds2:H              ;#      t1 evolution      #
+                            ;##########################
+  (center
+    (d0):C 
+    (p21 pl21 ph20 p22 ph21 p21 ph20):N
+  )
+  0.3u do:H 
+}
+
+;##################################
+;#  Second CP Period (SPECIFIC)   #
+;##################################
+
+  (p16:spf2 pl6 ph3):C  (p16 pl13 ph20):H (p16 pl7 ph4):N 
+
+if "go_t1>1"  
+{                           
+                            ;##########################
+  0.3u cpds2:H              ;#      t2 evolution      #
+                            ;##########################
+  (center
+    (d10):N 
+    (p1 pl1 ph20 p2 ph21 p1 ph20):C 
+  )
+  0.3u do:H ;
+
+}
+
+;#################################
+;#  Third CP Period (SPECIFIC)   #
+;#################################
+
+  (p18:spf3 pl18 ph6):C  (p17 pl13 ph20):H (p18 pl19 ph5):N 
+
+;########################
+;#  T3 Carbon Evolution #
+;########################
+
+;if "go_t3>1"
+;{
+;                            ;##########################
+;  0.3u cpds2:H              ;#      t1 evolution      #
+;                            ;##########################
+;  (center
+;    (d20):C 
+;    (p21 pl21 ph20 p22 ph21 p21 ph20):N
+;  )
+;  0.3u do:H 
+;}
+
+;######################################################
+;#            Homonuclear DARR/PDSD Mixing            #
+;######################################################
+  
+  (p1 pl1 ph7):C   (p1 pl2):H  ;store
+
+#ifdef cmpd
+ subr RFDR_cmpd()
+#else
+ subr RFDR_()             ; DEFAULT TO RFDR w/ PDSD
+#endif
+  
+  (p1 pl1 ph8):C   (p1 pl2):H  ;readout
+    
+  0.3u cpds2:H 
+
+;#######################################################
+;#                     Acquisition                     #
+;#######################################################
+
+gosc ph31 	;start ADC with ph31 signal routing
+
+#ifdef CDC
+;  d28                   ; T3 (d20) Carbon Const. Duty
+  d29                   ; T1 (d10) Nitrogen Const. Duty
+  d30                   ; T2 (d0) Carbon Const. Duty
+#endif
+
+1m do:H 				;decoupler off
+lo to Start times ns
+
+  30m mc #0 to Start F1PH(ip3, id0  & dd30) 
+                     F2PH(dp4, id10 & dd29 & rd0 & rd30 & rp3 )
+;                 F3PH(rd10 & rd20 & rp5 & rp2 & ip6, id20)
+
+HaltAcqu, 1m
+exit
+
+ph0 = 0
+ph1 = 3
+ph2 = 0 
+ph3 = 0 2 
+ph4 = 0 0 0 0   2 2 2 2 
+ph5 = 0 0 2 2 
+ph6 = 1 3 1 3   1 3 1 3
+      3 1 3 1   3 1 3 1
+ph7 = 0 2
+ph8 = 0 1
+
+ph10= 1
+
+ph20= 0
+ph21= 1
+ph22= 2
+
+;#######################################################
+;#                    RFDR Phases                      #
+;#######################################################
+
+#ifdef xy16
+ph23= 0 1 0 1 1 0 1 0 2 3 2 3 3 2 3 2
+ph24= 0 1 0 1 1 0 1 0 2 3 2 3 3 2 3 2
+#else
+ph23= 0 1 0 1 1 0 1 0
+ph24= 1 2 1 2 2 1 2 1 
+#endif
+
+ph31= 1 0 3 2   3 2 1 0
+      3 2 1 0   1 0 3 2 
+
+
+
+;#########################################################################
+
+;p10    : HC CP duration
+;pl10   : 13C ampl HC CP
+;spnam1 : file name for variable amplitude CP
+;sp1    : 1H ampl HN CP (p10)
+
+;p16    : C->N CP duration 
+;pl6 	: 13C Ampl. CN CP 
+;pl7 	: 15N Ampl. CN CP
+;spnam2 : file CN CP shape (shape on C)
+;sp2    : set to pl6 
+
+;p17    : N->C CP duration 
+;pl8 	: 13C Ampl. CN CP 
+;pl9 	: 15N Ampl. CN CP
+;pl14	: 1H decoupling during specific CP
+;spnam3 : file CN CP shape (shape on C)
+;sp3    : set to pl8 
+;l3      : RFDR repetitions
+;RFDRmix : mix time RFDR
+;zgoptns : (-D) cmpd, CDC, xy16
+
+;pl12  	: 1H decoupling
+;pl13 	: alt.1H decoupling
+;pl14	: 1H decoupling during specific CP
+;cpdprg2 : sequence used for decoupling (tppm15, cw, etc.)
+;pcpd2 	: pulse length in decoupling sequence
+
+;d8 	: pdsd/darr mixing time
+;pl16 	: 1H DARR ampl (DARR = MAS freq; PDSD =120)
+
+;o1 	: CA or CO frequency
+;cnst1 	: o1+cnst1=offset for specific CP
+;cnst2 	: offset for last X pulse
+
+;d0 	: 0 for 1D, 0.3u for initial t1 period in 2D
+;d28 	: constant duty cycle for t1
+;d29 	: constant duty cycle for t2
+
+;in0 	: 1/swh 15N t1 dimension
+;in10 	: 1/swh 13C t2 dimension
+;cnst0 	: Max td1 
+;cnst10 : Max td2 
+;FnMode : TPPI, States or States-TPPI
+
+;p1   	: 13C 90 
+;p2   	: 13C 180 
+;p3   	: 1H  90 
+;p4   	: 1H  180 
+;p21  	: 15N 90 
+;p22  	: 15N 180
+;pl1  	: ampl 13C hard pulse
+;pl2  	: ampl. 1H hard pulse
+;pl21 	: ampl.15N hard pulse
+

@@ -1,0 +1,24 @@
+; t2_prot.incl
+
+; List of Protections for t2 evolution
+
+;$COMMENT=t2 Protections
+;$CLASS=Solids INCL
+;$OWNER=nmrsu
+
+;###################
+;# Protections for #
+;#  t2 evolution   #
+;###################
+
+if "d28<25m" goto PrePassd28
+  1m 
+  print "final t3 evolution (d28) too large.  Reduce inf3, td3, or cnst28"
+  goto HaltAcqu
+PrePassd28, 1m
+
+if "d20<25m" goto PrePassd20
+  1m 
+  print "initial t3 evolution (d20) too large. Reduce inf3"
+  goto HaltAcqu
+PrePassd20, 1m

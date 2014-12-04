@@ -1,0 +1,184 @@
+;HH NOE experiment (TopSpin 2.3)
+
+;######################################################
+;#                                                    #
+;#  HN NOESY for solids                               #
+;#                                                    #
+;######################################################
+;
+;$COMMENT= HH NOESY Transfer Experiment
+;$CLASS=Solids
+;$DIM=2D
+;$TYPE= 1H detect Hetero
+;$SUBTYPE=Dipolar Transfer
+;$OWNER=guest
+;
+#include <HCN_defs.incl>
+
+;######################################################
+;#                   Define Mixing                    #
+;#    NOESY is Default, add Selective 90 w/ option    #
+;######################################################
+
+#include <fmp.HNOE.subr>
+
+;cnst11 : adjust t=0 for acq, if digmod = baseopt
+"acqt0=1u*cnst11"
+
+"in0=inf1"                  ;##########################
+#ifdef CPD                  ;#         CPD            #
+"d0=in0/2-2u-p3*4/3.14159"  ;#   t1_init => 90,-180   #
+#else                       ;#    Compound pulses     #
+"d0=in0/2-2u-p3*4/3.14159"  ;#   t1_init => 90,-180   #
+#endif                      ;#                        #
+"in30=inf1"                 ;#                        #
+define loopcounter go_t1    ;#   No increment if 1D   #
+"go_t1=td1"                 ;##########################
+
+define delay ONTIME         ;##########################
+define loopcounter T1evo    ;# Power Deposition Calcs #
+"T1evo=larger(td1,cnst30)"  ;#   Constant Duty Cycle  #
+"d30=T1evo*in30"            ;##########################
+
+                            ;##########################
+;$EXTERN                    ;# python insertion point #
+                            ;##########################
+
+Prepare, ze
+
+"d30=d30/2"                 ;#divide by 2 for mc macro#
+
+"ONTIME=aq+d0+d30+p10+p8+l3*TauR" ;#  DARR left out   #
+
+;######################################################
+;#               Protections: Pre-Check               #
+;######################################################
+
+#include <1H_ON_prot.incl>
+        ;total RF depsosition restriction
+
+;######################################################
+;#           Start of Active Pulse Program            #
+;######################################################
+
+Start, d1 do:C do:N
+
+;######################
+;#      PRESAT        #
+;######################
+
+#ifdef PRE
+  20u pl9:H
+  1m
+  d18 cw:H ph20
+  d13 do:H
+#endif
+
+#ifdef PURGE
+  5u
+  (p23:spf23 pl23 ph0):H
+  5u
+  d5
+#endif
+
+  (p3 pl2 ph1):H
+  3u
+
+;##########################
+;#      t1 evolution      #
+;##########################
+
+if "go_t1>1"
+{
+#ifdef CPD
+  1u pl3:N pl4:C     ; CPD power
+  d0 cpd3:N cpd4:C
+  1u do:C do:N
+#else
+(center
+  (d0):H
+  (p1 pl1 ph20 p2 ph21 p1 ph20):C
+  (p21 pl21 ph20 p22 ph21 p21 ph20):N
+)
+#endif
+}
+
+;######################################################
+;#              Homonuclear NOESY Mixing              #
+;######################################################
+
+  3u
+  (p3  pl2  ph2):H
+
+#ifdef PURGE
+  subr NOEs23_(ph4)   ; soft 90 (s23) with option
+#else
+  subr NOE()
+#endif
+  
+  (p3  pl2  ph3):H
+    
+;#######################################################
+;#                     Acquisition                     #
+;#######################################################
+
+  0.5u pl3:N pl4:C     ; GARP power on 15N
+  1u  cpd3:N cpd4:C
+
+  gosc ph31
+#ifdef CDC
+  d30
+#endif
+
+  1m do:N do:C
+
+  lo to Start times ns
+
+  30m mc #0 to Start
+        F1PH(ip0 & ip1, ip20 & id0)
+
+HaltAcqu, 1m
+exit
+
+;#######################################################
+;#             Phase Cycle (min=4, full=16)            #
+;#######################################################
+
+ph0=  2 2 0 0
+ph1=  0 2
+ph2=  0 0 2 2
+ph3=  {0}*4 {2}*4
+ph4=  2
+
+ph20= 0
+ph21= 1
+
+ph31= 0 2 2 0 2 0 0 2
+
+;PARAMETERS:
+;p1      : C 90  (pl1)
+;p2      : C 180 (pl1)
+;p3      : H 90  (pl2)
+;p8      : C Presat (-DCpre)
+;p6      : C soft 90  (pl26)
+;p10     : HC CP contact pl10 (C) and sp0 (H)
+;sp0     : H CP pwr
+;pl1     : C HP pwr
+;pl2     : H HP pwr
+;pl3     : N dec pwr
+;pl4     : C dec pwr
+;pl10    : C CP pwr
+;pl12    : H dec pwr
+;pl13    : H alt dec pwr (Spinlock and CW)
+;pl16    : H DARR pwr (DARR = MAS freq; PDSD =120)
+;pl26    : C soft 90 pwr
+;d1      : recycle delay
+;d8      : PDSD/DARR mix time
+;pcpd2   : pulse length in decoupling sequence
+;cpdprg2 : cw, tppm (at pl12), or lgs, cwlg. cwlgs (LG-decoupling 
+;spnam0  : use e.g. ramp.100 for variable amplitude CP
+;spnam6  : C soft 90 purge pulse (e.g. eSNOB)
+;cnst30  : expected td1 for use in constant Duty (-DCDC)
+;cnst31  : MAS Rate
+;FnMode  : TPPI, States or States-TPPI
+;zgoptns : (-D) PRE, PURGE, CPD, CDC

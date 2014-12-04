@@ -1,0 +1,195 @@
+;CC PDSD/DARR experiment (TopSpin 2.3)
+
+;######################################################
+;#                                                    #
+;#  PDSD & DARR/RAD                                   #
+;#  Szeverenyi, NM and Sullivan, MJ and Maciel, GE.   #
+;#    Journ Magn Reson 47(3):462-475, 1982            #
+;#  Takegoshi, K; Nakamura, S; Terao, T.              #
+;#    Chem Phys Lett. 344:631-637, 2001               #
+;#  CR Morcombe, V Gaponenko, RA Byrd, & KW Zilm      #
+;#    J Am Chem Soc 2004, 126, 7196-7197.             #
+;#                                                    #
+;#  Adjust pl20=wr on 1H channel for DARR             #
+;#  Adjust pl20=120 for PDSD                          #
+;#                                                    #
+;#  ns = n*4. 16 is full cycle                        #
+;#                                                    #
+;#  Indirect Dimension phasing is 90,-180             #
+;#                                                    #
+;######################################################
+;
+; Options DP, purge, Cpre
+; written Barth van Rossum, W Trent Franks
+
+;$COMMENT= HC CP with C Z-mixing
+;$CLASS=Solids
+;$DIM=2D
+;$TYPE=Homonuclear
+;$SUBTYPE=ZQ mixing
+;$OWNER=guest
+
+;prosol relations=<solids_cp>
+
+;#include <Avancesolids.incl>
+#include <C_detect_def.incl>
+
+;######################################################
+;#                   Define Mixing                    #
+;#  PDSD/DARR is Default, add Selective 90 w/ option  #
+;######################################################
+
+#include <fmp.DARR.subr>
+
+;cnst11 : adjust t=0 for acq, if digmod = baseopt
+"acqt0=1u*cnst11"
+
+"in0=inf1"                  ;##########################
+"d0=in0/2-0.3u-p1*2/3.14159";#   t1_init => 90,-180   #
+"in30=inf1"                 ;#                        #
+define loopcounter go_t1    ;#   No increment if 1D   #
+"go_t1=td1"                 ;##########################
+
+"in10=inf2"
+define loopcounter go_t2
+"go_t2=td2"
+
+define delay ONTIME         ;##########################
+define loopcounter T1evo    ;# Power Deposition Calcs #
+"T1evo=larger(td1,cnst30)"  ;#   Constant Duty Cycle  #
+"d30=T1evo*in30"            ;##########################
+                            
+                            ;##########################
+;$EXTERN                    ;# python insertion point #
+                            ;##########################
+
+aqseq 312
+			    
+Prepare, ze
+
+"d30=d30/2"                 ;#divide by 2 for mc macro#
+"ONTIME=aq+d0+d30+p10+p8"   ;#  DARR left out   #
+
+;######################################################
+;#               Protections: Pre-Check               #
+;######################################################
+
+#include <Standard_Prot.incl>
+        ;acquisition, CP time, PDSD/DARR, and echo restrictions
+#include <DARR_prot.incl>
+        ;d8
+#include <t1_prot.incl>
+        ;check t1 evolution time
+#include <ONTIME_prot.incl>
+        ;total RF depsosition restriction
+
+;######################################################
+;#           Start of Active Pulse Program            #
+;######################################################
+
+Start, d1 do:H
+
+;######################################################
+;#               Protections: In Situ                 #
+;######################################################
+
+; d0,d30 checked every row                            
+#include <t1evol_prot.incl> 
+                            
+#ifdef Cpre
+ ; Carbon Presatuaration
+ (p8 pl8 ph20):C 
+#endif
+
+;######################################################
+;#              Cross/Direct Polarization             #
+;######################################################
+
+#ifdef DP
+   (p1 pl1 ph10):C 
+#else
+                         (p3  pl2  ph1):H
+  (p10:spf0 pl10 ph2):C  (p10 pl20 ph0):H 
+#endif
+
+if "go_t1>1"
+{                           ;##########################
+  d0 cpds2:H                ;#      t1 evolution      #
+  0.3u do:H                 ;##########################
+}
+
+;######################################################
+;#            Homonuclear DARR/PDSD Mixing            #
+;######################################################
+  
+  (p1 pl1 ph3):C   (p1 pl2):H  ;store
+
+#ifdef purge            
+  subr DARRs6_(ph20)   ; soft 90 (s6) with option
+#else
+  subr PDSD_DARR()
+#endif
+  
+  (p1 pl1 ph4):C   (p1 pl2):H  ;readout
+    
+  0.3u cpds2:H 
+
+;#######################################################
+;#                     Acquisition                     #
+;#######################################################
+
+gosc ph31 	           	;start ADC with ph31 signal routing
+
+#ifdef CDC
+  d30                   ; Constant duty cycle
+#endif
+
+1m do:H 				;decoupler off
+lo to Start times ns
+
+d1 mc #0 to Start F1PH(dp3,id0 & dd30) 
+
+HaltAcqu, 1m
+exit
+
+;#######################################################
+;#             Phase Cycle (min=4, full=16)            #
+;#######################################################
+
+ph0=  0
+ph1=  1 3
+ph2=  {0}*8 {2}*8
+ph3=  1 1 3 3  
+ph4=  1 1 2 2 3 3 0 0  
+
+ph10= {1 3}*4 {3 1}*4  ; X90 DP
+
+ph20= 0 2
+
+ph31= 2 0 1 3 0 2 3 1 0 2 3 1 2 0 1 3
+
+;PARAMETERS:
+;p1      : C 90  (pl1)
+;p2      : C 180 (pl1)
+;p3      : H 90  (pl2)
+;p8      : C Presat (-DCpre)
+;p6      : C soft 90  (pl26)
+;p10     : HC CP contact pl10 (C) and sp0 (H)
+;sp0     : H CP pwr
+;pl1     : C HP pwr
+;pl2     : H HP pwr
+;pl10    : C CP pwr
+;pl12    : H dec pwr
+;pl13    : H alt dec pwr (Spinlock and CW)
+;pl16    : H DARR pwr (DARR = MAS freq; PDSD =120)
+;pl26    : C soft 90 pwr
+;d1      : recycle delay
+;d8      : PDSD/DARR mix time
+;pcpd2   : pulse length in decoupling sequence
+;cpdprg2 : cw, tppm (at pl12), or lgs, cwlg. cwlgs (LG-decoupling 
+;spnam0  : use e.g. ramp.100 for variable amplitude CP
+;spnam6  : C soft 90 purge pulse (e.g. eSNOB)
+;cnst30  : expected td1 for use in constant Duty (-DCDC)
+;cnst31  : MAS Rate
+;FnMode  : TPPI, States or States-TPPI
+;zgoptns : (-D) D1, DP, CDC, Cpre, purge

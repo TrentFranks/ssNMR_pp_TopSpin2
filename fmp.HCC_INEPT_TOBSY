@@ -1,0 +1,197 @@
+;HCC
+
+;INEPT xfer with TOBSY mixing for C
+;written by WTF
+;Avance II+ version
+
+;######################################################
+;#                                                    #
+;# H-C INEPT Transfer Experiment, C detect            #
+;#                                                    #
+;######################################################
+
+;$COMMENT= HCC INEPT
+;$CLASS=Solids
+;$DIM=3D
+;$TYPE=Heteronuclear
+;$SUBTYPE=HCC Scalar Xfer
+;$OWNER=guest
+
+;prosol relations=<solids_cp>
+
+;#include <Avancesolids.incl>
+#include <C_detect_def.incl>
+
+;######################################################
+;#                   Define Mixing                    #
+;#     TOBSY 9_3^1 default: -DT961 for tobsy 9_6^1    #
+;######################################################
+
+#include <fmp.TOBSY.subr>
+
+;cnst11 : to adjust t=0 for acquisition, if digmod = baseopt
+"acqt0=1u*cnst11"
+
+"in0=inf1"                  ;##########################
+"d0=in0/2-p3*2/3.14159"     ;#   t1_init => 90,-180   #
+"in30=inf1"                 ;##########################
+
+"in10=inf2"                 ;##########################
+"d10=in10/2-0.3u-p1*2/3.14" ;#   t2_init => 90,-180   #
+"in29=inf2"                 ;##########################
+
+define delay ONTIME         ;##########################
+define loopcounter T1evo    ;#                        #
+"T1evo=larger(td1,cnst30)"  ;#   Constant Duty Cycle  #
+"d30=T1evo*in30"            ;#                        #
+define loopcounter T2evo    ;# Power Deposition Calcs #
+"T2evo=larger(td2,cnst29)"  ;#                        #
+"d29=T2evo*in29"            ;##########################
+
+define loopcounter go_t1
+"go_t1=td1"
+define loopcounter go_t2
+"go_t2=td2"
+                             
+aqseq 312
+
+                            ;##########################
+;$EXTERN                    ;# python insertion point #
+                            ;##########################
+
+Prepare, ze
+
+;######################################################
+;#               Protections: Pre-Check               #
+;######################################################
+
+#ifdef T961
+  "ONTIME=aq+p3+p4+p3+p4+C961mix"
+#else
+  "ONTIME=aq+p3+p4+p3+p4+C931mix"
+#endif
+
+#include <Standard_Prot.incl>
+        ;acq, CP time, etc.
+#include <ONTIME_prot.incl>
+        ;total RF depsosition restriction
+
+;######################################################
+;#           Start of Active Pulse Program            #
+;######################################################
+
+Start, d1 do:H
+
+                         (p3  pl2  ph1):H
+
+
+;########################
+;#    t1 evolution      #
+;########################
+
+if "go_t1>1"
+{        
+  (center                   
+    (d0):H                  
+    (p1 pl1 ph20 p2 ph21 p1 ph20):C
+  )      
+}
+  
+  d4
+  (center (p2 pl1 ph3):C (p4 ph2):H )
+  d4
+  (ralign (p1 ph5):C     (p3 ph4):H )
+  d5
+  (center (p2 pl1 ph6):C (p4 ph7):H )
+  d5
+
+if "go_t2>1"  
+{                           ;##########################
+  0.3u cpds2:H              ;#      t2 evolution      #
+                            ;##########################
+  (center
+    (d10):C 
+    (p21 pl21 ph20 p22 ph21 p21 ph20):N
+  )
+  0.3u do:H 
+}
+
+;######################################################
+;#              Homonuclear TOBSY Mixing              #
+;######################################################
+  
+  (p1 pl1 ph8):C   (p1 pl2):H  ;store
+
+#ifdef T961            
+  subr C961_TOBSY()
+#else
+  subr C931_TOBSY()
+#endif
+  
+  (p1 pl1 ph9):C   (p1 pl2):H  ;readout
+    
+  0.3u cpds2:H ;decouple 1H during acquisition
+
+;#######################################################
+;#                     Acquisition                     #
+;#######################################################
+
+gosc ph31 	           	;start ADC with ph31 signal routing
+
+#ifdef CDC
+  d29                   ; Constant
+#endif
+
+1m do:H 			;decoupler off
+
+#ifdef CDC
+  d30                   ; Constant
+#endif
+
+lo to Start times ns
+
+d1 mc #0 to Start F1PH(ip1,id0 & dd30) 
+                  F2PH(rd0 & rp1 & dp5, id10 & dd29 & rd30)
+
+HaltAcqu, 1m
+exit
+  
+ph1 = 0 2              ; H exc
+ph2 = 0                ; H echo
+ph3 = 0                ; X echo 
+ph4 = 3                ; H store
+ph5 = 0 0 2 2          ; C exc
+ph6 = 0                ; C echo
+ph7 = 0                ; H exc
+ph8 = {3}*4 {1}*4
+ph9 = 1
+
+ph20= 0
+ph21= 1
+
+;#######################################################
+;#                   TOBSY Phases                      #
+;#######################################################
+
+ph29=(360)   0  40  80 120 160 200 240 280 320
+ph28=(360) 180 220 260 300 340 380 420 460 500 
+
+
+ph31= 2 0 0 2   0 2 2 0        ; receiver
+
+;#########################################################################
+
+;PARAMETERS:
+;p1      : C 90 pl1
+;p2      : C 180 pl1
+;p3      : H 90 at pl2
+;p4      : H 180 at pl2
+;pl1     : C HP pwr level
+;pl2     : H HP pwr level
+;pl12    : H dec pwr
+;pl13    : H alt dec pwr (Spinlock and CW)
+;d1      : recycle delay
+;d4      : HC INEPT time (1/4J ~ 1.5ms)
+;d5      : HC INEPT time (1/4J ~ 1.5ms)
+;pcpd2   : pulse length in decoupling sequence
+;cpdprg2 : cw, tppm (at pl12), or lgs, cwlg. cwlgs (LG-decoupling 

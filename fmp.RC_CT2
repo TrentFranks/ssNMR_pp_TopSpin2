@@ -1,0 +1,101 @@
+;RC_CT2
+
+;###################################################################
+;#    -X (13C) Hard-Pulse Spin Echo *T2* is ~0.6*Signal(t0)        #
+;# Hard Pulse does ~NOT~ compensate for scalar coupling evolution  #
+;# Soft Pulse DOES compensate for scalar coupling evolution if set #
+;#     Use appropriate (vd<10ms) vdlist with Topspin Analysis      #
+;#        Analysis -> T1/T2 Relaxation Analysis -> uxnmrt2         #
+;###################################################################
+
+;Direct Polarization for X channel (13C)
+;Measurement of X T2 (simple spin echo) with vd list
+;written by WTF
+;Avance II+ version
+
+;$COMMENT= X Direct Polarization with simple T2 spin echo
+;$CLASS=Solids
+;$DIM=2D
+;$TYPE=Direct Polarization
+;$SUBTYPE=Relaxation
+;$OWNER=Guest
+
+define delay ONTIME
+;prosol relations=<solids_cp>
+
+;#include <Avancesolids.incl>
+#include <C_detect_def.incl>
+
+;cnst11 : to adjust t=0 for acquisition, if digmod = baseopt
+"acqt0=1u*cnst11"
+
+                            ;##########################
+;$EXTERN                    ;# Python insertion point #
+                            ;##########################
+
+Prepare, ze
+
+;######################################################
+;#           Start of Active Pulse Program            #
+;######################################################
+
+Start, d1 do:H
+
+;######################################################
+;#               Protections: In Situ                 #
+;######################################################
+
+"d6=vd"
+"ONTIME=aq+2*d6"
+#include <Standard_Prot.incl>
+        ;acq, CP time, etc.
+#include <ONTIME_prot.incl>
+        ;total RF depsosition restriction
+  
+  0.3u cpds2:H  ;decouple 1H during acquisition
+
+  (p1 pl1 ph1):C 
+
+;######################################################
+;#            Hard or Selective Pulse                 #
+;######################################################
+
+  d6               
+#ifdef SP
+  (p8:spf8 pl28 ph2):C 
+#else
+  (p2 pl1 ph2):C 
+#endif
+  d6
+
+;#######################################################
+;#                     Acquisition                     #
+;#######################################################
+
+  go=Start ph31         
+  1m do:H 
+  30m mc #0 to Start F1QF(ivd) 
+
+HaltAcqu, 1m
+exit
+
+ph1 = 1 3 2 0          ; X Hard Pulse
+ph2 = 0 0 1 1 
+
+ph31= 1 3 0 2          ; receiver
+
+;#######################################################
+
+;PARAMETERS:
+;p1      : C 90  (pl1)
+;p2      : C 180 (pl1)
+;pl1     : C HP pwr level
+;pl12    : H dec pwr
+;pl13    : H alt dec pwr (Spinlock and CW)
+;pl28    : C Soft 180
+;d1      : recycle delay
+;pcpd2   : pulse length in decoupling sequence
+;cpdprg2 : cw, tppm (at pl12), or lgs, cwlg. cwlgs (LG-decoupling 
+;spnam8  : soft X 180 e.g. rSnob
+;zgoptns : (-D) SP
+

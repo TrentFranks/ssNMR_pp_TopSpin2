@@ -1,0 +1,25 @@
+;t1evol_prot.incl
+
+; List of Protections for t1 evolution
+; For code where t1 has d29 and d10 (like the hCNH)
+
+;$COMMENT=t1 Protections
+;$CLASS=Solids INCL
+;$OWNER=nmrsu
+
+;###################
+;# Protections for #
+;#  t1 evolution   #
+;###################
+
+if "d29<25m" goto Passd29ev
+  1m
+  print "final t1 (d29) became too large, aborted"
+  goto HaltAcqu
+Passd29ev, 1m
+
+if "d10<25m" goto Passd10ev
+  1m 
+  print "t2 (d10) became too large, aborted"
+  goto HaltAcqu
+Passd10ev, 1m

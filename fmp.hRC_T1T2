@@ -1,0 +1,239 @@
+;hRX_T1T2
+
+;Cross Polarization X channel Relaxaion measurements (13C)
+;Options for measurement of X T1 and T2 with vd list
+;written by WTF
+;Avance II+ version
+
+;######################################################
+;#                                                    #
+;#  C CP Experiment to determine Relaxation           #
+;#                                                    #
+;#   echo -X (C) Spin Echo *T2* is ~0.6*Signal(t0)    #
+;#   Does ~NOT~ compensate for Jcoupling by Default   #
+;#                                                    #
+;# s180 -X (C) Soft Spin Echo *T2* is ~0.6*Sig(t0)    #
+;# ~DOES~ compensate for J-coupling evolution if set  #
+;#                                                    #
+;#  fmp.hRX_XT2 or fmp.hRX_T1T2 (with -DCT2) for 2D   #
+;#                                                    #
+;#     -Carbon Direct Exc. Inversion Recovery         #
+;#   Use appropriate vdlist with Topspin Analysis     #
+;# Analysis -> T1/T2 Relaxation Analysis -> function  #
+;#                                                    #
+;#  MUST DEFINE ZGOPTN: CT1 CT2 CT2SP                 #
+;#                                                    #
+;######################################################
+
+;$COMMENT= X CP with optionalH and C T1 and T2 periods
+;$CLASS=Solids
+;$DIM=2D
+;$TYPE=CPMAS
+;$SUBTYPE=Relaxation
+;$OWNER=Guest
+;prosol relations=<solids_cp>
+
+;#include <Avancesolids.incl>
+#include <C_detect_def.incl>
+define delay ONTIME
+
+;cnst11 : to adjust t=0 for acquisition, if digmod = baseopt
+"acqt0=1u*cnst11"
+
+                            ;##########################
+;$EXTERN                    ;# Python insertion point #
+                            ;##########################
+
+Prepare, ze
+
+;######################################################
+;#               Protections: Pre-Check               #
+;######################################################
+
+"ONTIME=aq+p10+2*d6"
+
+#ifdef CT2
+"d6=vd"
+"ONTIME=aq+2*d6"
+#endif
+
+#ifdef CT2SP
+"d6=vd"
+"ONTIME=aq+2*d6"
+#endif
+
+;######################################################
+;#           Start of Active Pulse Program            #
+;######################################################
+
+Start, d1 do:H
+
+;######################################################
+;#               Protections: In Situ                 #
+;######################################################
+
+#ifdef CT2
+"d6=vd"
+"ONTIME=aq+p10+2*d6"
+#endif
+
+#ifdef CT2SP
+"d6=vd"
+"ONTIME=aq+p10+2*d6"
+#endif
+
+#include <Standard_Prot.incl>
+			;acquisition, CP time, PDSD/DARR, and echo restrictions
+#include <ONTIME_prot.incl>
+        ;total RF depsosition restriction
+
+;#####################################################
+;# HT1                                               #
+;# -Proton Inversion Recovery Zero-Cross is ~0.6*T1  #
+;#   Use appropriate vdlist with Topspin Analysis    #
+;# Analysis -> T1/T2 Relaxation Analysis -> invrec   #
+;#####################################################
+
+#ifdef HT1
+                       (p4 pl2 ph0):H 
+  vd
+#endif
+
+;#####################################################
+;# HT2                                               #
+;# -Proton Simple Spin Echo *T2* is ~0.6*Signal(t0)  #
+;#   Use appropriate vdlist with Topspin Analysis    #
+;# Analysis -> T1/T2 Relaxation Analysis -> uxnmrt2  #
+;#####################################################
+
+#ifdef HT2
+                         (p3  pl2 ph11):H 
+                         vd
+                         (p4  pl2 ph0):H 
+                         vd
+  (p10:spf0 pl10 ph2):C  (p10 pl20 ph0):H 
+ 
+#endif
+
+;###########
+;# Default #
+;###########
+
+#ifndef HT2
+                         (p3  pl2  ph1):H
+  (p10:spf0 pl10 ph2):C  (p10 pl20 ph0):H 
+  
+#endif
+
+  0.3u cpds2:H ;decouple 1H during acquisition
+
+
+;#####################################################
+;# CT1                                               #
+;#        -Carbon Prepared Along -Z after CP         #
+;#   Use appropriate vdlist with Topspin Analysis    #
+;# Analysis -> T1/T2 Relaxation Analysis -> invrec   #
+;#####################################################
+
+#ifdef CT1
+  (p1  pl1  ph3):C 
+  0.3u do:H 
+  vd
+  (p1  pl1  ph4):C 
+  0.3u cpds2:H  
+#endif
+
+;###############################################################
+;# CT2                                                         #
+;#      (13C) Hard-Pulse Spin Echo *T2* is ~0.6*Signal(t0)     # 
+;#     Does ~NOT~ compensate for scalar coupling evolution     #
+;#    Use appropriate (vd<10ms) vdlist with Topspin Analysis   #
+;#       Analysis -> T1/T2 Relaxation Analysis -> uxnmrt2      #
+;###############################################################
+
+#ifdef CT2
+  vd
+  (p2  pl1  ph20):C 
+  vd
+#endif
+
+;###############################################################
+;# CT2SP                                                       #
+;#     (13C) Soft-Pulse Spin Echo *T2* is ~0.6*Signal(t0)      #
+;#   Does compensate for scalar coupling evolution if SP set   #
+;#    Use appropriate (vd<10ms) vdlist with Topspin Analysis   #
+;#       Analysis -> T1/T2 Relaxation Analysis -> uxnmrt2      #
+;###############################################################
+
+#ifdef CT2SP
+  vd
+  (p8:spf8  pl28  ph20):C 
+  vd
+#endif
+
+;#######################################################
+;#                     Acquisition                     #
+;#######################################################
+  
+  go=Start ph31         
+  1m do:H 
+  30m mc #0 to Start F1QF(ivd) 
+
+HaltAcqu, 1m
+exit
+
+ph0 = 0                ; H CP Spin lock
+
+ph1 = 1 3              ; H Hard Pulse
+ph2 = 0 0 2 2 1 1 3 3  ; X CP Spin Lock 
+
+ph3 = 1 1 3 3 2 2 0 0  ; C to minus Z
+ph4 = 3 3 1 1 0 0 2 2  ; C back to starting point
+
+ph11= 3 1              ; H90 Inversion
+
+ph20= 0 1 2 3
+
+#ifndef CT2
+#ifndef HT2
+#ifndef CT2SP
+  ph31= 0 2 2 0 1 3 3 1  ; receiver
+#endif
+#endif
+#endif
+
+#ifdef CT2
+  ph31= 0 0 2 2 3 3 1 1  ; receiver
+#endif
+
+#ifdef HT2
+  ph31= 0 0 2 2 3 3 1 1  ; receiver
+#endif
+
+#ifdef CT2SP
+  ph31= 0 0 2 2 3 3 1 1  ; receiver
+#endif
+
+;##################################################
+
+;PARAMETERS:
+;p1      : C 90  (pl1)
+;p2      : C 180 (pl1)
+;p3      : H 90  (pl2)
+;p4      : H 180 (pl2)
+;p8      : C soft 180 (spnam8, pl28) use -CT2SP
+;p10     : H-C CP at pl10 (C) and sp0 (H)
+;pl1     : C HP pwr level
+;pl2     : H HP pwr level
+;pl10    : X CP pwr
+;pl12    : H dec pwr
+;pl13    : H alt dec pwr (Spinlock and CW)
+;pl20    : H CP pwr
+;pl28    : C soft 180 
+;d1      : recycle delay
+;d6      : Echo delay -Decho 
+;pcpd2   : pulse length in decoupling sequence
+;cpdprg2 : cw, tppm (at pl12), or lgs, cwlg. cwlgs (LG-decoupling 
+;spnam0  : use e.g. ramp.100 for variable amplitude CP
+;spnam8  : soft X 180 e.g. rSnob
+;zgoptns : (-D) HT1, HT2, CT1, CT2(SP)

@@ -1,0 +1,27 @@
+	acq_prot_Admntn.incl
+X	acq_prot.incl		50.1m
+X	d6_echo_prot.incl
+X  	d8_Duty_prot.incl
+X	DARR_prot.incl
+X	DREAM_prot.incl
+	DUO_prot.incl
+	l20sp20mix_prot.incl
+X	ONTIME_prot.incl
+	p10_prot.incl
+	p11_prot.incl
+	p15_prot.incl
+	p16_prot.incl
+	p8_Duty_prot.incl
+	p8_prot.incl
+X	POSTC7_prot.incl
+	R2T_prot.incl
+	REDOR_prot.incl
+	REDOR_prot.incl~
+	RFDR_prot.incl
+	sp20mix_prot.incl
+X	SPC5_prot.incl
+X	t1evol_prot.incl
+X	t1_prot.incl
+X	t2evol_prot.incl
+X	t2_prot.incl
+X	TauR_prot.incl  400.1 us 2.5kHz spinning

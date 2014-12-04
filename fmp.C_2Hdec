@@ -1,0 +1,96 @@
+;C_zgdec
+
+;Direct Polarization for X channel (13C)
+;written by WTF
+;Avance II+ version
+
+;######################################################
+;#                                                    #
+;#  C Direct Polarization Experiment                  #
+;#                                                    #
+;#  Adjust pl1, p1 for maximum signal.                #
+;#                                                    #
+;######################################################
+
+;$COMMENT= C Direct excitation
+;$CLASS=Solids
+;$DIM=1D
+;$TYPE=Direct Polarization
+;$SUBTYPE=Setup
+;$OWNER=Guest
+
+define delay ONTIME
+;prosol relations=<solids_cp>
+
+;#include <Avancesolids.incl>
+#include <CHD_defs.incl>
+
+;cnst11 : to adjust t=0 for acquisition, if digmod = baseopt
+"acqt0=1u*cnst11"
+                            ;##########################
+;$EXTERN                    ;# Python insertion point #
+                            ;##########################
+Prepare, ze
+
+;######################################################
+;#      Long ACQ  Protections: Pre-Check              #
+;######################################################
+
+#ifdef lacq
+
+#include <LACQ_Prot.incl>
+#include <LACQ_ONTIME_prot.incl>
+
+#endif
+
+#ifndef lacq
+
+#include <Standard_Prot.incl>
+#include <ONTIME_prot.incl>
+
+#endif
+
+
+;######################################################
+;#           Start of Active Pulse Program            #
+;######################################################
+
+Start, d1 do:H do:D
+  1u pl22:D
+  1u pl12:H
+
+  1u cpds2:H
+  1u cpds3:D ;decouple 1H during acquisition
+  
+  (p1 pl1 ph10):C
+
+;#######################################################
+;#                     Acquisition                     #
+;#######################################################
+
+  go=Start ph31         
+  1m do:H do:D
+  30m mc #0 to Start F0(zd)
+
+  
+HaltAcqu, 1m
+exit
+
+ph10= 1 3 3 1 2 0 0 2  ; X90 DP
+ph31= 0 2 2 0 1 3 3 1  ; receiver
+
+;#########################################################################
+
+;PARAMETERS:
+;p1   : X (13C,pl1)  90 use -Dp90 
+;p2   : X (13C,pl1) 180 use -Decho
+;p3   : Proton 90 at power level sp0
+;pl1  : X (13C) HP power level
+;pl2  : Proton HP power level
+;pl12 : decoupling power level 
+;pl13 : alt decoupliong power level
+;d1   : recycle delay
+;pcpd2 : pulse length in decoupling sequence
+;cpdprg2 : cw, tppm (at pl12), or lgs, cwlg. cwlgs (LG-decoupling 
+;spnam0 : use e.g. ramp.100 for variable amplitude CP
+

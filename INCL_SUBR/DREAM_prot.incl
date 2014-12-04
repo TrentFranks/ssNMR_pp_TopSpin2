@@ -1,0 +1,27 @@
+; DREAM_prot.incl
+; W. Trent Franks Jan. 2011
+; FMP Berlin
+
+; List of Protections for DREAM
+
+;$COMMENT=DREAM Protections
+;$CLASS=Solids INCL
+;$OWNER=nmrsu
+
+;###################
+;# Protections for #
+;#     DREAM       #
+;###################
+
+if "p19<500u" goto Passp19
+  1m 
+  print "p19 READ-IN/OUT exceeds 500us"
+  goto HaltAcqu
+Passp19, 1m
+
+if "p20<10m" goto Passp20
+  1m
+  print "p20 DREAM Mixing exceeds 10ms"
+  goto HaltAcqu
+Passp20, 1m
+

@@ -1,0 +1,266 @@
+; hcNC (NC) Z-filter TEDOR (Topspin 2.3)
+
+;######################################################
+;#                                                    #
+;# Z-Filtered TEDOR                                   #
+;#  Jaroniec, CP; Filip, C; Griffin, RG;              #
+;#     JACS 2002 10728-10742                          #
+;#                                                    #
+;#     SWH(F1) should be set to n*w_rot, then l9=1    #
+;#                                                    #
+;#     IF this is not sufficient Bandwidth            #
+;#     THEN l9 = SWH(F1)/wr  (l9 = Taur/in0)          #
+;#       where l9 must be an integer                  #
+;#                                                    #
+;######################################################
+
+; Options DP, CDC, TedorCDC
+; written Barth van Rossum and W. Trent Franks
+
+;$COMMENT=HX CP, XY Transferred Echo DOuble Resonance (TEDOR) Dec H
+;$CLASS=Solids
+;$DIM=2D
+;$TYPE=Heteronuclear
+;$SUBTYPE=TEDOR
+;$OWNER=guest
+prosol relations=<solids_cp>
+
+;#include <Avancesolids.incl>
+#include <C_detect_def.incl>
+; #include <trigg.incl>
+
+;######################################################
+;#                   Define TEDOR                     #
+;######################################################
+
+#include <fmp.REDOR.subr>
+
+define delay ZFil1
+"ZFil1 = (2s/cnst31)-(p21)-(p1)-5u"
+define delay ZFil2
+"ZFil2 = (2s/cnst31)-p1-5u"
+define delay tau_comp
+"tau_comp=(1s*(2*l9-l11)/(l9*cnst31))-p1-p5"
+
+;########################
+;#  Define Acq timings  #
+;########################
+
+"in0=inf1"                  ;##########################
+"d0=3u"                     ;#     t1_init => 0,  0   #
+"in30=inf1"                 ;#                        #
+"l10=1"                     ;#  acquisition counter   #
+"l11=l10 %l9"               ;#     leftover time      #
+                            ;##########################
+
+define delay ONTIME         ;##########################
+define loopcounter T1evo    ;# Power Deposition Calcs #
+"T1evo=larger(td1,cnst30)"  ;#   Constant Duty Cycle  #
+"d30=T1evo*in30"            ;##########################
+                            
+                            ;##########################
+;$EXTERN                    ;# python insertion point #
+                            ;##########################
+
+;cnst11 : to adjust t=0 for acquisition, if digmod = baseopt
+"acqt0=1u*cnst11"
+
+Prepare, ze
+
+"d30=d30/2"                 ;#divide by 2 for mc macro#
+"ONTIME=aq+d0+d30+p10+p8+REDORmixtot"
+
+;######################################################
+;#               Protections: Pre-Check               #
+;######################################################
+
+"ONTIME=aq+d0+d30+p10+p8+REDORmixtot"
+
+#include <Standard_Prot.incl>
+        ;acquisition, CP time, PDSD/DARR, and echo restrictions
+#include <REDOR_prot.incl>
+            ;loop l4, l14
+#include <t1_prot.incl>
+            ;check t1 evolution time
+#include <ONTIME_prot.incl>
+        ;total RF depsosition restriction
+
+  
+Start, 30ms  do:H 
+
+;######################################################
+;#               Protections: In Situ                 #
+;######################################################
+
+; d0,d30 checked every row                            
+#include <t1evol_prot.incl> 
+            
+
+  "l11=l10 %l9"
+  "tau_comp=1s*(2*l9-l11)/(l9*cnst31)-p1-p21-5u"
+
+   1m rpp10                     ; REDOR phase reset
+   1m rpp11
+
+  10u pl1:C                   	
+  10u pl2:H                   	;set power
+  10u pl21:N 
+
+  d1
+  
+#ifdef DP
+   (p1 pl1 ph10):C 
+#else
+                         (p3  pl2  ph1):H
+  (p10:spf0 pl10 ph2):C  (p10 pl20 ph0):H 
+#endif
+
+;######################################################
+;#              REDOR produces CxNz                   #
+;######################################################
+subr REDOR()
+
+; Z-Filter period
+
+   (p1 pl1 ph20):C         ;This pulse starts at 2*(l4+1)*Tr
+       1u do:H   
+       1u pl16:H 			
+       1u cw:H   
+   ZFil1		   ;Quash Anti-Phase Elements
+       1u do:H   
+       1u cpds2:H 
+   (p21 pl21 ph20):N 
+  
+;######################################################
+;#                CzNy t1 evolution                   #
+;# t=0 for first point subsequent points set in situ  #
+;######################################################
+
+if "l10==2"  
+  {
+  "d0=in0"
+  }
+if "l10 > 1" 
+  {  
+  d0:N ;cpds3:H 
+  }
+
+;######################################################
+;#        Make up for partial rotor periods           #
+;#         Always at least 1 rotor  period            #
+;######################################################
+
+(p21 pl21 ph3):N  		
+   1u do:H   
+   1u pl16:H 			
+   1u cw:H   
+   tau_comp		   ; re-synchronize with rotor 
+   1u do:H   
+   1u cpds2:H 
+(p1 pl1 ph20):C            ; this pulse ends at end of rotor period
+
+;######################################################
+;#              REDOR reconverts to Cx                #
+;######################################################
+
+subr REDOR2()
+
+; Third Z-Filter period
+
+   (p1 pl1 ph4):C  
+     1u do:H   
+     1u pl16:H 			
+     1u cw:H   
+     ZFil2		  ;Quash Anti-Phase Elements
+     1u do:H   
+     1u cpds2:H 
+   (p1 pl1 ph5):C 	
+
+; Options DP, CDC, TedorCDC
+   
+gosc ph31 		;start ADC with ph31 signal routing
+
+#ifdef CDC
+  d30           ; Constant duty cycle
+#endif
+
+#ifdef TedorCDC
+
+TEDORCDC,
+  subr REDOR_CDC()
+lo to TEDORCDC times 2
+
+#endif
+
+1m do:H 				;decoupler off
+
+lo to Start times ns
+
+30m mc #0 to Start F1PH(ip3,id0 & iu10 & dd30) 
+
+HaltAcqu, 1m
+exit
+
+
+ph0= 0
+ph1= {1}*16 {3}*16                ;1H excitation
+
+ph2=  1                           ;13C CP
+ph3=  1 3				          ;15N read-out
+ph4=  2 2 0 0                     ;13C read-in
+ph5=  {1}*4 {2}*4 {3}*4 {0}*4
+ph6= 0 0 1 1 2 2 3 3
+ph8= 1 3 2 0 3 1 0 2
+
+;######################
+;#  15N REDOR pulses  #
+;######################
+
+#ifdef xy16
+ph10= 0 1 0 1 1 0 1 0 2 3 2 3 3 2 3 2
+ph11= 0 1 0 1 1 0 1 0 2 3 2 3 3 2 3 2
+#else
+ph10= 0 1 0 1 
+ph11= 0 1 0 1 
+#endif
+
+ph20= 0
+ph21= 1
+ph22= 2
+ph23= 3
+
+ph31= 0 2 2 0 1 3 3 1 2 0 0 2 3 1 1 3
+      2 0 0 2 3 1 1 3 0 2 2 0 1 3 3 1     ;receiver phase
+
+;#####################################################
+
+;PARAMETERS:
+;p1      : C 90  (pl1)
+;p2      : C 180 (pl1)
+;p3      : H 90  (pl2)
+;p4      : H 180 (pl2)
+;p8      : C Presat (-DCpre)
+;p10     : HC CP contact pl10 (C) and sp0 (H)
+;p21     : N 90 
+;p22     : N 180
+;pl1     : C HP pwr
+;pl2     : H HP pwr
+;pl10    : C CP pwr
+;pl12    : H dec pwr
+;pl13    : H alt dec pwr
+;pl16    : H dephasing pwr = 1wr
+;pl21    : N HP pwr
+;spnam0  : CP ramp
+;d1      : recycle delay
+;in0 	 : 1/swh 15N t1 dimension
+;l4      : REDOR rotor periods (x4)
+;l9      : Taur/inf1, integer >= 1
+;l14     : total expected TEDOR rotor periods/4 -DTedorCDC
+;l15     : calculated extra TEDOR loops -DTedorCDC
+;pcpd2   : pulse length in decoupling sequence
+;cpdprg2 : cw, tppm (at pl12), or lgs, cwlg. cwlgs (LG-decoupling 
+;spnam0  : use e.g. ramp.100 for variable amplitude CP
+;cnst30  : expected td1 for use in constant Duty (-DCDC)
+;cnst31  : MAS Rate
+;FnMode  : TPPI, States or States-TPPI
+;zgoptns : (-D) TedorCDC, xy16, DP, CDC, Cpre

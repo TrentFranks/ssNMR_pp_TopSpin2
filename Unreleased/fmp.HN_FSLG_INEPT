@@ -1,0 +1,309 @@
+;HN INEPT for 15N 
+;written by WTF
+;Avance II+ version
+
+;######################################################
+;#                                                    #
+;# H-N INEPT Transfer Experiment, N detect            #
+;#   FSLG during INEPT period.  Experimental          #
+;#                                                    #
+;#  Indirect Dimension phasing is 0,0                 #
+;#                                                    #
+;#  F1(t1) H; F2 (t2) N                               #
+;######################################################
+
+;$COMMENT= HN INEPT with homonuclear 1H decoupling 
+;          during INEPT transfer
+;$CLASS=Solids
+;$DIM=2D
+;$TYPE=Heteronuclear
+;$SUBTYPE=Scalar Xfer
+;$OWNER=guest
+
+;prosol relations=<solids_cp>
+
+;#include <Avancesolids.incl>
+#include <N_detect_def.incl>
+
+;cnst11 : to adjust t=0 for acquisition, if digmod = baseopt
+"acqt0=1u*cnst11"
+
+;######################################################
+;#                   Define FSLG                      #
+;#    Constants and pulses needed for Lee-Goldburg    #
+;######################################################
+
+;cnst20=applied RF field in Hz (w1)
+
+;this is (-sr) from topspin
+"cnst21=0"
+
+"cnst22= cnst20/sqrt(2)+cnst24"
+"cnst23=-cnst20/sqrt(2)+cnst24"
+;"cnst22=cnst20/sqrt(2)+cnst24+2000"	;cnst20=desired RF field in Hz
+;"cnst23=-cnst20/sqrt(2)+cnst24-2000"	;negative offset is cnst23
+
+define pulse pFSLG
+define pulse pMA
+define pulse pMAc
+
+"pFSLG=294000000u/(360*cnst20)"
+"pMA =p3*547/900"
+"pMAc=p3*353/900"
+
+;######################################################
+;#                   Define Mixing                    #
+;#  Use complete FSLG components during INEPT stages  #
+;######################################################
+
+define delay HNinept1
+define delay HNinept2
+define loopcounter FSLG1
+define loopcounter FSLG2
+
+                            ;##########################
+"FSLG1=d4/(4*pFSLG)"        ;# FSLG loops in d4       #
+"FSLG2=d5/(4*pFSLG)"        ;# FSLG loops in d5       #
+"HNinept1=(FSLG1*4*pFSLG)"  ;# d4 to nearest full loop#
+"HNinept2=(FSLG2*4*pFSLG)"  ;# d5 to nearest full loop#
+                            ;##########################
+"l0=0"
+
+#ifndef OFF
+"in0=l10*4*pFSLG"
+"in30=in0"
+#endif
+
+#ifdef OFF
+"in0=inf1"
+"d0=in0/2-p3*2/3.14159"
+"in30=in0"
+#endif
+
+                            ;##########################
+define loopcounter T1evo    ;# Power Deposition Calcs #
+"T1evo=larger(td1,cnst30)"  ;#   Constant Duty Cycle  #
+"d30=T1evo*in30"            ;#                        #
+define delay ONTIME         ;#                        #
+define loopcounter go_t1    ;#   No increment if 1D   #
+"go_t1=td1"                 ;##########################
+
+                            ;##########################
+;$EXTERN                    ;# python insertion point #
+                            ;##########################
+
+Prepare, ze
+
+"d30=d30/2"                 ;#divide by 2 for mc macro#
+
+;######################################################
+;#               Protections: Pre-Check               #
+;######################################################
+
+"ONTIME=aq+(2*d4)+(2*d5)+d30"
+
+#include <Standard_Prot.incl>
+        ;acq, CP time, etc.
+#include <ONTIME_prot.incl>
+        ;total RF depsosition restriction
+
+;######################################################
+;#           Start of Active Pulse Program            #
+;######################################################
+
+Start, d1 do:H
+
+(10u fq=cnst21):H
+
+;#####################################################
+;# Excite to the tilted-rot. x-frame,                #
+;#  INEPT period results in z,y-phase                #
+;#####################################################
+
+(p3  pl2  ph1):H
+
+;############################################
+;#    t1 evolution with FSLG turned off     #
+;############################################
+
+#ifdef OFF
+if "go_t1>1"
+{        
+  (center
+    (d0):H
+    (p21 pl21 ph21 p22 ph20 p21 ph21):N
+  )
+}
+
+;Tilt to LG frame
+(pMA ph21):H
+
+#endif
+
+;############################################
+;#         t1 evolution with FSLG           #
+;############################################
+
+#ifndef OFF
+if "l0>1"
+{
+FSLGt1,
+ (pFSLG ph20 fq=cnst22 pl13):H
+  pFSLG:H ph22 fq=cnst23:H
+  pFSLG:H ph20 fq=cnst22:H 
+  pFSLG:H ph22 fq=cnst23:H
+  lo to FSLGt1 times l0
+  lo to FSLGt1 times l10
+}
+1u fq=cnst21:H
+
+#endif
+
+;############################################
+;#  LG Normal is +Z,+X (Lab)  ph=X,frq=(+)  #
+;############################################
+
+FSLGd4n1,
+ (pFSLG ph20 fq=cnst22 pl13):H
+  pFSLG:H ph22 fq=cnst23:H
+  pFSLG:H ph20 fq=cnst22:H 
+  pFSLG:H ph22 fq=cnst23:H
+  lo to FSLGd4n1 times FSLG1
+
+1u fq=cnst21:H
+
+  (center (p22 pl1 ph20):N (p4 ph2 pl2):H )
+
+;############################################
+;# LG Normal is -Z,+X (Lab)  ph=-X,frq=(+)  #
+;#  Empirically determined in an echo exp.  #
+;############################################
+
+1u
+FSLGd4n2,
+ (pFSLG ph22 fq=cnst22 pl13):H
+  pFSLG:H ph20 fq=cnst23:H
+  pFSLG:H ph22 fq=cnst22:H 
+  pFSLG:H ph20 fq=cnst23:H
+  lo to FSLGd4n2 times FSLG1
+
+1u fq=cnst21:H
+
+; polarization is Hx(int)Cz
+; Interaction frame is -Z,X wrt. Lab frame
+
+(pMA pl2 ph21):H    ; frame aligned with -Z
+
+; polarization is in Hx(lab)Cz (or maybe -HxCz)
+
+(p3 ph4):H
+
+; Frame is reset, polarization is HzCz
+
+  TauR
+
+;############################################
+;#   LG Frame to +Z,+X (Lab)  ph=X,frq=(+)  #
+;############################################
+
+  (ralign
+    (p21 ph5):N
+    (pMA ph21):H
+  )
+
+;d5
+FSLGd5n1,
+ (pFSLG ph20 fq=cnst22 pl13):H
+  pFSLG:H ph22 fq=cnst23:H
+  pFSLG:H ph20 fq=cnst22:H 
+  pFSLG:H ph22 fq=cnst23:H
+  lo to FSLGd5n1 times FSLG2
+
+1u fq=cnst21:H
+
+;############################################
+;#   LG Frame to -Z,+X (Lab)  ph=-X,frq=(+)  #
+;############################################
+  (center
+    (p22 pl1 ph6):N
+    (p4 pl2 ph7):H
+  )
+
+;d5
+FSLGd5n2,
+ (pFSLG ph22 fq=cnst22 pl13):H
+  pFSLG:H ph20 fq=cnst23:H
+  pFSLG:H ph22 fq=cnst22:H 
+  pFSLG:H ph20 fq=cnst23:H
+  lo to FSLGd5n2 times FSLG2
+
+1u fq=cnst21:H
+
+  0.3u cpds2:H ;decouple 1H during acquisition
+
+;#######################################################
+;#                     Acquisition                     #
+;#######################################################
+
+gosc ph31 	           	;start ADC with ph31 signal routing
+
+1m do:H 			;decoupler off
+
+#ifdef CDC
+#ifndef OFF
+  3u pl13:H
+  3u cw:H
+  d30                   ; Constant
+  1m do:H
+#endif
+#endif
+
+#ifdef CDC
+#ifdef OFF
+  d30                   ; Constant
+#endif
+#endif
+
+lo to Start times ns
+
+d1 mc #0 to Start F1PH(dp4,iu0 & id0 & dd30) 
+
+HaltAcqu, 1m
+exit
+
+ph1 = 0 2              ; H exc
+ph2 = 0                ; H echo
+ph3 = 0                ; X echo 
+ph4 = {3}*4 {1}*4      ; H store
+ph5 = 0 0 2 2          ; C exc
+ph6 = 0                ; C echo
+ph7 = 0                ; H exc
+
+ph20= 0
+ph21= 1
+ph22= 2
+ph23= 3
+
+ph31= 2 0 0 2 0 2 2 0  ; receiver
+
+;#########################################################################
+
+;PARAMETERS:
+;p21     : N 90 pl1
+;p22     : N 180 pl1
+;p3      : H 90 at pl2
+;p4      : H 180 at pl2
+;pl21    : N HP pwr level
+;pl2     : H HP pwr level
+;pl12    : H dec pwr
+;pl13    : H alt dec pwr (Spinlock and CW)
+;d1      : recycle delay
+;d4      : HN INEPT time (1/4J ~ 2.8ms)
+;d5      : HN INEPT time (1/4J ~ 2.8ms)
+;cnst21  : 0 Hz (on resonance)
+;cnst20  : LG-RF 1H field strength, in Hz
+;cnst22  : (+)LG-offset, calculated from cnst20 and cnst24 
+;cnst23  : (-)LG-offset, calculated from cnst20 and cnst24
+;cnst24  : additional 1H offset under LG, usually 0 - -2000
+;pcpd2   : pulse length in decoupling sequence
+;cpdprg2 : cw, tppm (at pl12), or lgs, cwlg. cwlgs (LG-decoupling 

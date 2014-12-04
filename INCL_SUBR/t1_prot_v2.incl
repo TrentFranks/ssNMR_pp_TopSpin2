@@ -1,0 +1,25 @@
+; t1.incl
+
+; List of Protections for t1 evolution
+; For code where t1 has d29 and d10 (like the hCNH)
+
+;$COMMENT=t1 Protections
+;$CLASS=Solids INCL
+;$OWNER=nmrsu
+
+;###################
+;# Protections for #
+;#  t1 evolution   #
+;###################
+
+if "d29<30m" goto Passd29
+1m 
+print "final t1 evolution (d29) too large.  Reduce inf1, td1, or cnst29"
+goto HaltAcqu
+Passd29, 1m
+
+if "d10<30m" goto PrePassd10
+1m 
+print "initial t1 evolution (d10) too large. Reduce inf1"
+goto HaltAcqu
+PrePassd10, 1m

@@ -1,0 +1,14 @@
+;aq_prot.incl
+
+; Test the rf on-time during Aquisition (aq)
+; 50ms is allowed
+
+;$COMMENT=Protection against long acquisition time
+;$CLASS=Solids PROT
+;$OWNER=guest
+
+if "aq<500.1m" goto Passaq
+1m
+print "Acquisition time exceeds 500m limit!"
+goto HaltAcqu
+Passaq, 1m
